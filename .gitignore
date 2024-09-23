@@ -6,5 +6,8 @@ preprocessed_datasets/*
 !xview_dataset_raw/README.md
 !preprocessed_datasets/README.md
 
+# Dont ignore this file
+!xview_dataset_raw/xview_class_labels.json
+
 # ignore pycache files
 __pycache__/
