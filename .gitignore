@@ -1,0 +1,10 @@
+# Ignore datasets
+xview_dataset_raw/*
+preprocessed_datasets/*
+
+# Track readme to retain directory structure
+!xview_dataset_raw/README.md
+!preprocessed_datasets/README.md
+
+# ignore pycache files
+__pycache__/
