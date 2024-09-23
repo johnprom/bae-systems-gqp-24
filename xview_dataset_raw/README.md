@@ -1,4 +1,4 @@
-### Data Structure for Preprocessed Data
+### Data Structure for Raw Data
 
 Expects 3 folders: "train_images" containing images, the master annoation file: "xView_train.geojson", and "xview_class_labels.json" containing a mapping of numeric class label to class label.
 
