@@ -1,0 +1,18 @@
+name: baes
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.9
+  - pip
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cudatoolkit=11.3
+  - numpy
+  - opencv
+  - matplotlib
+  - pip:
+      - ultralytics  # YOLOv8 package
+      - timm  # Swin Transformer (in the timm library)
