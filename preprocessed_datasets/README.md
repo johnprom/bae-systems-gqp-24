@@ -6,7 +6,20 @@ Note also that for each dataset there must be a train and val directory each wit
 
 ```
 preprocessed_datasets/
-├── dataset_1/
+├── filtered_labels.json 
+│   
+├── baseline-unsplit/      # this is the full preprocessed set before train/test split
+│   ├── images/
+│   │   ├── image1.tif
+│   │   ├── image2.tif
+│   ├── labels/
+│       ├── image1.txt
+│       └── image2.txt
+│   
+├── baseline-<approach>-<max_dim>-<imgsz>/     # baseline set from which we degrade
+│   │                                        # highest effective resolution possible
+│   │                                        # split into test and train sets
+│   │                                        # eg: degraded-padding-4224-1280
 │   ├── train/
 │   │   ├── images/
 │   │   │   ├── image1.tif
@@ -20,7 +33,8 @@ preprocessed_datasets/
 │       └── labels/
 │           ├── image1.txt
 │   
-├── dataset_2/
+├── degraded-<approach>-<max_dim>-<effective_imgsz>/      # baseline set from which we degrade    
+│   │                                                   # eg: degraded-tiling-4224-608        
 │   ├── train/
 │   │   ├── images/
 │   │   │   ├── image1.tif
