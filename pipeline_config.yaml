@@ -1,0 +1,22 @@
+preprocessing_params:
+  skip_step: false        # Skip preprocessing if set to true
+  imgsz: 640              # Controls the size of the baseline images. Also sets the value for tile size.
+  approach: "TILING"      # Can be either 'TILING' or 'PADDING'
+  stride: 100             # Stride size in pixels (only matters for tiling)
+  train_split: 80         # Controls the train/test split (eg: train_split=80 -> 80:20)
+  clear_data: true        # True will clear all preprocessing data folders before processing starts
+  # Object classes to be considered (ref: xview_dataset_raw/xview_class_labels.json) 
+  target_classes: [20, 21, 23, 24] 
+train_params:
+  skip_step: false        # Skip finetuning if set to true
+  epochs: 50              # Number of epochs during fine-tuning
+  imgsz: 640              # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing.
+  model: 'yolov8m.pt'     # Pretrained base model. Options: yolov8s.pt, yolov8n.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt
+eval_params:
+  skip_step: false        # Skip degradation and inference steps if true
+  enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
+  # Defines the initial search grid for degrading and inference.
+  search_grid: [640, 608, 576, 544]
+report_params:
+  skip_step: false        # Skip report generation if true
+  verbose: true       # Dummy parameter

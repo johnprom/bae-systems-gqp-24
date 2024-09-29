@@ -1,13 +1,25 @@
 # Ignore datasets
 xview_dataset_raw/*
 preprocessed_datasets/*
+finetuned_models/*
 
 # Track readme to retain directory structure
 !xview_dataset_raw/README.md
 !preprocessed_datasets/README.md
+!finetuned_models/README.md
 
 # Dont ignore this file
 !xview_dataset_raw/xview_class_labels.json
 
 # ignore pycache files
 __pycache__/
+
+# ingore pretrained model files
+yolov8s.pt
+yolov8n.pt
+yolov8m.pt
+yolov8l.pt
+yolov8x.pt
+
+# ingore YOLO runs directory
+runs/

@@ -1,0 +1,8 @@
+names:
+- Pickup Truck
+- Utility Truck
+- Truck
+- Cargo Truck
+nc: 4
+train: ../preprocessed_datasets/baseline-<approach>-<max_dim>-<imgsz>/train
+val: ../preprocessed_datasets/baseline-<approach>-<max_dim>-<imgsz>/val

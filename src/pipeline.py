@@ -1,36 +1,56 @@
-from yolov8.ultralytics.ultralytics import YOLO
+# from yolov8.ultralytics.ultralytics import YOLO (for if you have yolo src code locally)
+from ultralytics import YOLO
 from preprocessing.preprocessing import run_preprocessing
+import os
 
-'''
-TODO generalize and invoke the following steps:
-    1 - Invoke preprocessing(pipeline_config.preprocessing_params)
-    2 - Invoke init pretrained model + fine-tuning(pipeline_config.train_params) 
-    3 - Invoke model evaluation(pipeline_config.eval_params)
-    4 - Invoke curve generation + find elbow(pipeline_config.output_params) 
-'''
+# TODO: Generalize and move these methods out of this file
 
-'''
-    For a given object_class:
-        Preprocess
-            Preprocess image
-            Filter geojson for target object class
-                Preprocess annotations to YOLO
-                Filter object classes also in the yaml
-        For each model Load pretrained model and perform fine-tuning 
-            model = YOLO('yolov8n.pt')
-            model.train(data='../data_config.yaml', epochs=50, imgsz=640)
-        For each generated model variation
-            get MAP scores
-            results = model.val(data='../data_config.yaml)
-        For each score, res pair
-            plot curve
-            find elbow
-            return (object_class : elbow val in real-world distance)
-'''
+def run_finetuning(params, data_config_path):
+    if params['skip_step']:
+        print('Skipping Fine-Tuning Module.')
+    else:
+        base_model = YOLO(params['model'])
+        #ft_model = base_model.train(data=data_config_path, epochs=config['epochs'], imgsz=config['imgsz'])
+        final_weights_path = 'finetuned_models/latest_model.pt'
+        base_model.save(final_weights_path) # change to ft_model.save(final_weights_path) when data is there
+        print("Finished Running Fine-tuning.")
+
+def run_eval_on_initial_resolutions(config, data_config_path):
+    # run eval on baseline (path already set) and write to results file 
+    for res in config['search_grid']:
+        # res_path = create_degraded set based on baseline and write to preprocessed datasets
+        # set path in data config to res_path
+        # run eval and write to results file 
+        print("---")
+
+def generate_report(params):
+    print("Finished generating report with: " + str(params))
+
+def run_eval(model, dataset_path):
+    results = ft_model.val(data=data_config_path)
+    # write results to some structured file
 
 def run_pipeline(pipeline_config):
+    # get path for YOLO data config file
+    data_config_path = os.path.join(os.path.dirname(__file__), '..', 'data_config.yaml')
 
-    params="some params" # we can parse these from pipeline config
-    run_preprocessing(params)
+    # run_preprocessing(imgsz: int, approach: ApproachType, stride: int, train_split: int, clear_data: Boolean, target_classes: [int])
+    run_preprocessing(pipeline_config['preprocessing_params']) 
+
+    # run_finetuning(epochs: int, imgsz: int, model: str, data_config_path: str)
+    run_finetuning(pipeline_config['train_params'], data_config_path)
+
+    # run_eval_on_initial_resolutions(search_grid: [int], enable_eval: false, data_config_path: str)
+    #run_eval_on_initial_resolutions(pipeline_config['eval_params'], data_config_path, ft_model)
+
+    # TODO: run_optimizer(data_config_path, ft_model)
+    # in a loop: 
+    #  optimizer calls elbow fn and decides if another datapoint is needed (continue or return next_res)
+    #  generate degraded set
+    #  set path in data config to res_path
+    #  run eval and write to results file 
+
+    # generate_report()
+    generate_report(pipeline_config['report_params'])
 
     print("Pipeline Finished.")
