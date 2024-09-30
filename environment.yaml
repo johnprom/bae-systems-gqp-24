@@ -16,3 +16,4 @@ dependencies:
   - pip:
       - ultralytics  # YOLOv8 package
       - timm  # Swin Transformer (in the timm library)
+      - geojson
