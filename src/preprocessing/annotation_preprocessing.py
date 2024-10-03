@@ -33,46 +33,49 @@ max_img_size = 4224
 #  or.. do the split first
 #  or.. abstract this method enough so we can pass in paths
 
-target_folder = '../../preprocessed_datasets/dataset_1/labels' # dir for new annotation files
-# TODO - Filter out annoations for unwanted object classes first (filter by type_id val)
+def preprocess_annotations(image_dir, target_folder, max_img_size):
+    os.makedirs(target_folder, exist_ok=True)
 
-# iterate through all files in the target directory
-for filename in os.listdir(directory):
-    if filename.endswith('.tif'):
+    # TODO - Filter out annoations for unwanted object classes first (filter by type_id val)
 
-        file_path = os.path.join(directory, filename)
-        with rasterio.open(file_path) as src:
-            pixel_x = src.width
-            pixel_y = src.height
-            target_img = filename
-        print("target_img " + target_img)
-
-        txt_filename = os.path.join(target_folder, target_img.replace('.tif', '.txt'))
-
-        # load the og GeoJSON file
-        with open('annotations_master/xView_train.geojson') as f:
-            geojson_data = json.load(f)
-
-        # iterate through features and filter by image_id
-        filtered_features = [
-            feature for feature in geojson_data['features']
-            if feature['properties'].get('image_id') == target_img
-        ]
-
-        # write to annotation file (overwrite if it exists)
-        with open(txt_filename, 'w') as txt_file:
-            for feature in filtered_features:
-                properties = feature['properties']
-                coords = properties['bounds_imcoords']
-                class_label = properties['type_id']
-                image_id = properties['image_id']
-
-                relative_coords = pixel_to_relative_coords(coords, pixel_x, pixel_y, max_img_size)
-
-                # <class_id> <x_center> <y_center> <width> <height>
-                feat_new_debug = "DEBUG - coords: " + coords + " relative: " + relative_coords + " label: " + str(class_label) + " img_id: " + image_id + " ogxy: " + str(pixel_x) + "," + str(pixel_y)
-                feat_new = str(class_label) + " " + relative_coords
-
-                txt_file.write(feat_new_debug + '\n' + feat_new + '\n') 
-
-        print(f"Created or overwrote: '{txt_filename}'")
+    # iterate through all files in the target directory
+    for filename in os.listdir(directory):
+        if filename.endswith('.tif'):
+    
+            file_path = os.path.join(directory, filename)
+            with rasterio.open(file_path) as src:
+                pixel_x = src.width
+                pixel_y = src.height
+                target_img = filename
+                
+            print(f"Processing annotations for: {target_img}")
+    
+            txt_filename = os.path.join(target_folder, target_img.replace('.tif', '.txt'))
+    
+            # load the og GeoJSON file
+            with open('annotations_master/xView_train.geojson') as f:
+                geojson_data = json.load(f)
+    
+            # iterate through features and filter by image_id
+            filtered_features = [
+                feature for feature in geojson_data['features']
+                if feature['properties'].get('image_id') == target_img
+            ]
+    
+            # write to annotation file (overwrite if it exists)
+            with open(txt_filename, 'w') as txt_file:
+                for feature in filtered_features:
+                    properties = feature['properties']
+                    coords = properties['bounds_imcoords']
+                    class_label = properties['type_id']
+                    image_id = properties['image_id']
+    
+                    relative_coords = pixel_to_relative_coords(coords, pixel_x, pixel_y, max_img_size)
+    
+                    # <class_id> <x_center> <y_center> <width> <height>
+                    feat_new_debug = "DEBUG - coords: " + coords + " relative: " + relative_coords + " label: " + str(class_label) + " img_id: " + image_id + " ogxy: " + str(pixel_x) + "," + str(pixel_y)
+                    feat_new = str(class_label) + " " + relative_coords
+    
+                    txt_file.write(feat_new_debug + '\n' + feat_new + '\n') 
+    
+            print(f"Created or overwrote: '{txt_filename}'")
