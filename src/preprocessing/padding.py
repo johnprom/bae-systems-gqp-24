@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 import shutil
 
@@ -52,7 +51,7 @@ def padding(ctxt):
             img = Image.open(img_path)
             padded_img = pad_image(img, imgsz)
             padded_img.save(os.path.join(output_folder, img_file))
-            if config['verbose']:
+            if ctxt.verbose:
                 print(f"Padded and saved {img_file}.")
             
     print("Finished running padding approach.")

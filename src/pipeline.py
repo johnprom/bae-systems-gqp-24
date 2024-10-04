@@ -32,6 +32,9 @@ class Pipeline:
         # them out into the proceeding if statement
         self.train_baseline_dir = ""
         self.val_baseline_dir = ""
+        
+        self.maxwidth = 0
+        self.maxheight = 0
 
     def get_pipeline_config(self):
         return self.config

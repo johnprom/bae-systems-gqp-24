@@ -1,7 +1,7 @@
 # Execution flow parameters
-run_clean: true # default false, deletes the output directory
-run_preprocess: true # default false
-run_train: true # default false
+# run_clean: true # default false, deletes the output directory
+# run_preprocess: true # default false
+# run_train: true # default false
 run_knee_discovery: true # default false
 # run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
 generate_report: true # default false
@@ -39,7 +39,7 @@ target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time
 #
-preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+preprocess_method: "padding" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
 # Either "tiling" or "padding", reflected by the options in preprocess_methods below
 #
 # Module-specific parameters
