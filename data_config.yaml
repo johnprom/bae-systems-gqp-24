@@ -4,5 +4,5 @@ names:
 - Truck
 - Cargo Truck
 nc: 4
-train: ../preprocessed_datasets/baseline-<approach>-<max_dim>-<imgsz>/train
-val: ../preprocessed_datasets/baseline-<approach>-<max_dim>-<imgsz>/val
+train: /Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/src/../preprocessed_datasets/data/baseline/train/tiling/640_640/100
+val: /Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/src/../preprocessed_datasets/data/baseline/val/tiling/640_640/100

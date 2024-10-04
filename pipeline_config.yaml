@@ -1,22 +1,122 @@
-preprocessing_params:
-  skip_step: false        # Skip preprocessing if set to true
-  imgsz: 640              # Controls the size of the baseline images. Also sets the value for tile size.
-  approach: "TILING"      # Can be either 'TILING' or 'PADDING'
-  stride: 100             # Stride size in pixels (only matters for tiling)
-  train_split: 80         # Controls the train/test split (eg: train_split=80 -> 80:20)
-  clear_data: true        # True will clear all preprocessing data folders before processing starts
-  # Object classes to be considered (ref: xview_dataset_raw/xview_class_labels.json) 
-  target_classes: [20, 21, 23, 24] 
-train_params:
-  skip_step: false        # Skip finetuning if set to true
-  epochs: 50              # Number of epochs during fine-tuning
-  imgsz: 640              # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing.
-  model: 'yolov8m.pt'     # Pretrained base model. Options: yolov8s.pt, yolov8n.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt
-eval_params:
-  skip_step: false        # Skip degradation and inference steps if true
-  enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
-  # Defines the initial search grid for degrading and inference.
-  search_grid: [640, 608, 576, 544]
-report_params:
-  skip_step: false        # Skip report generation if true
-  verbose: true       # Dummy parameter
+# Execution flow parameters
+run_clean: true # default false, deletes the output directory
+run_preprocess: true # default false
+run_train: true # default false
+run_knee_discovery: true # default false
+# run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
+generate_report: true # default false
+#
+#
+# Global parameters
+#
+# top_dir: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24" # top-level directory
+# default to one directory up from the pipleline.py file, which should be the repository directory
+#
+#data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
+data_config_filename: "data_config.yaml"
+# REQUIRED and MUST be either absolute path or based in the directory of pipeline.py
+#
+input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from top_dir
+interim_images_subdir: "interim" # REQUIRED subdir from input_images_subdir
+input_images_labels_filename: "xView_train.geojson" # REQUIRED inside input_images_subdir
+input_class_labels_filename: "xview_class_labels.json" # REQUIRED inside input_images_subdir
+output_subdir: "output" # REQUIRED subdir from top_dir
+model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
+trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, subdir from top_dir
+#
+pixel_size: 0.3 # in meters
+
+target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
+  20: "Pickup Truck"
+  21: "Utility Truck"
+  23: "Truck"
+  24: "Cargo Truck"
+  # - [20, "Pickup Truck"]
+  # - [21, "Utility Truck"]
+  # - [23, "Truck"]
+  # - [24, "Cargo Truck"]
+#
+# eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
+# only "detection" is supporeted at this time
+#
+preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+# Either "tiling" or "padding", reflected by the options in preprocess_methods below
+#
+# Module-specific parameters
+preprocess:
+  output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
+  filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preoprocess:output_subdir
+  clean_subdir: true # wipes out the preprocess output_subdir, default false
+  train_split: 0.8 # REQUIRED FOR PREPROCESSING
+train:
+  clean_subdir: true # Code needs to be added for this
+knee_discovery:
+  output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
+  clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
+  clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
+  # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
+  # Defines the initial search grid for degrading and inference. Default is false
+  #
+  search_resolution_range: [0.85, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
+  # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
+  # if enabled_feeback is true, then this range is just the initial search
+  # in enabled_feedback is false, then this range of values are the only ones searched
+  #
+  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
+  # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
+  # example of range to be searched from above given a 640x640 original resolution
+  # again, note that 640x640 would always be searched regardless
+#
+report:
+  output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
+  clean_subdir: true # wipes out the reports output_subdir
+#
+#
+# Supported reprocessing methods parameters
+preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be specified and MUST match process_method: keyword above
+  tiling: # User-specified method name (can be any string)
+    # image_size: [640, 640] # REQUIRED FOR TILING METHOD, REQUIRED to be square
+    image_size: 640 # REQUIRED FOR TILING METHOD, REQUIRED to be square, TODO: change the code for this
+    stride: 100 # REQUIRED FOR TILING METHOD
+    #
+    # these following directories are subdir from preprocess:output_dir
+    train_baseline_subdir: "baseline/train/tiling/{width}_{height}/{stride}" # REQUIRED FOR TILING METHOD
+    val_baseline_subdir: "baseline/val/tiling/{width}_{height}/{stride}" # REQUIRED FOR TILING METHOD
+    train_degraded_subdir: "degraded/train/tiling/{width}_{height}/{stride}/{effective_width}_{effective_height}"
+    # REQUIRED FOR TILING METHOD
+    #
+    val_degraded_subdir: "degraded/val/tiling/{width}_{height}/{stride}/{effective_width}_{effective_height}"
+    # REQUIRED FOR TILING METHOD
+    #
+    output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
+    # REQUIRED FOR TILING METHOD
+    #
+  padding:  # User-specified method name (can be any string)
+    padsize: "max_square" # size of padding in (width, height) or "max_square" which is the maximum square value of the dataset
+    # default is "max_square", currently only "max_square" required, so this parameter is never referenced
+    #
+    # image_size: [640, 640] # REQUIRED FOR PADDING METHOD
+    image_size: 640 # REQUIRED FOR PADDING METHOD
+    #
+    # these following directories are subdir from preprocess:output_dir
+    train_baseline_subdir: "baseline/train/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
+    val_baseline_subdir: "baseline/val/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
+    train_degraded_subdir: "degraded/train/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+    # REQUIRED FOR PADDING METHOD
+    #
+    val_degraded_subdir: "degraded/val/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+    # REQUIRED FOR PADDING METHOD
+#
+models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be specified and MUST match model: keyword above
+  yolov8m: # User-specified model name (can be any string)
+    pretrained: # Specifies use of a pretrained model
+      library: "ultralytics" # not used, here for reference
+      name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
+    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/model.pt" # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+    # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
+    # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+    input_image_size: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
+    # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
+    # That is, preprocess_methods:<method>:image_size
+    epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training

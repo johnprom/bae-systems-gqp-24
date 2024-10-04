@@ -1,56 +1,123 @@
 # from yolov8.ultralytics.ultralytics import YOLO (for if you have yolo src code locally)
-from ultralytics import YOLO
-from preprocessing.preprocessing import run_preprocessing
+import argparse
 import os
+import pprint
+import shutil
 
-# TODO: Generalize and move these methods out of this file
+from knee_discovery.knee_discovery import run_knee_discovery
+from preprocessing.preprocessing import run_preprocessing
+# from reports.reports import generate_report
+from train.train import run_finetuning
+from util.util import load_pipeline_config
+# import yaml
 
-def run_finetuning(params, data_config_path):
-    if params['skip_step']:
-        print('Skipping Fine-Tuning Module.')
+# TODO: DAN Move generate_report out of this file
+
+def generate_report(ctxt):
+    print("Finished generating report (not supported yet): ")
+
+class Pipeline:
+    def __init__(self, args):
+        self.config = load_pipeline_config(args.config_filename)
+        self.verbose = args.verbose
+  
+        self.input_images_dir = self.get_input_images_dir_path()
+        self.interim_images_dir = self.get_interim_images_dir_path()
+        
+        # Here is where to store state information. Do not put state information into self.config
+        self.train_images_list = [] # list of image files in the training set
+        self.val_images_list = [] # list of image files in the validation set
+
+        # The following code applies to all methods. If a new method is created that is not applicable to some lines here, break
+        # them out into the proceeding if statement
+        self.train_baseline_dir = ""
+        self.val_baseline_dir = ""
+
+    def get_pipeline_config(self):
+        return self.config
+    
+    def get_top_dir(self):
+        if 'top_dir' in self.config:
+            return self.config['top_dir']
+        return os.path.join(os.path.dirname(__file__), '..')
+
+    def get_data_config_dir_path(self):
+        return os.path.join(self.get_top_dir(), self.config['data_config_filename'])
+        
+    def get_output_dir_path(self):
+        return os.path.join(self.get_top_dir(), self.config['output_subdir'])
+    
+    def get_preprocessing_dir_path(self):
+        return os.path.join(self.get_top_dir(), self.config['preprocess']['output_subdir'])
+    
+    def get_input_images_dir_path(self):
+        return os.path.join(self.get_top_dir(), self.config['input_images_subdir'])
+    
+    def get_interim_images_dir_path(self):
+        return os.path.join(self.get_input_images_dir_path(), self.config['interim_images_subdir'])
+    
+    def get_filtered_labels_filename(self):
+        return os.path.join(self.get_preprocessing_dir_path(), self.config['preprocess']['filtered_labels_filename'])
+
+    def get_train_geojson_filename(self):
+        return os.path.join(self.get_input_images_dir_path(), self.config['input_images_labels_filename'])
+    
+    def run_clean(self):
+        # remove output directory if exists
+        # This does NOT delete preprocessed images and not tuned models either
+        # It just deletes results and reports
+        if self.verbose:
+            print("start running clean with the following configuration:")
+            pprint.pprint(self.config)
+        output_dir = self.get_output_dir_path()
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir, ignore_errors=True)
+        if self.verbose:
+            print("done running clean")
+    
+    def run_pipeline(self):
+        
+        pipeline_config = self.config
+    
+        if "run_clean" in pipeline_config and pipeline_config["run_clean"]:
+            self.run_clean()
+    
+        if "run_preprocess" in pipeline_config and pipeline_config["run_preprocess"]:
+            run_preprocessing(self)
+    
+        if "run_train" in pipeline_config and pipeline_config["run_train"]:
+            run_finetuning(self)
+    
+        if "run_knee_discovery" in pipeline_config and pipeline_config["run_knee_discovery"]:
+            run_knee_discovery(self)
+    
+        if "generate_report" in pipeline_config and pipeline_config["generate_report"]:
+            generate_report(self)
+    
+        print("Pipeline Finished.")
+
+# Define the main function
+def main():
+    parser = argparse.ArgumentParser(description="Pipeline for determining optimal satellite imagery resolution.")
+    
+    parser.add_argument("config_filename", type=str, help="The path to the configuration file.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Specify verbosity")
+    
+    args = parser.parse_args()
+    
+    if args.verbose:
+        print(f"Processing file: {args.config_filename} with verbosity on.")
     else:
-        base_model = YOLO(params['model'])
-        #ft_model = base_model.train(data=data_config_path, epochs=config['epochs'], imgsz=config['imgsz'])
-        final_weights_path = 'finetuned_models/latest_model.pt'
-        base_model.save(final_weights_path) # change to ft_model.save(final_weights_path) when data is there
-        print("Finished Running Fine-tuning.")
+        print(f"Processing file: {args.config_filename}")
+        
+    pipeline_context = Pipeline(args)
 
-def run_eval_on_initial_resolutions(config, data_config_path):
-    # run eval on baseline (path already set) and write to results file 
-    for res in config['search_grid']:
-        # res_path = create_degraded set based on baseline and write to preprocessed datasets
-        # set path in data config to res_path
-        # run eval and write to results file 
-        print("---")
+    config = pipeline_context.get_pipeline_config()
+    
+    pipeline_context.run_pipeline()
+        
+    print("Exited Main.")
 
-def generate_report(params):
-    print("Finished generating report with: " + str(params))
-
-def run_eval(model, dataset_path):
-    results = ft_model.val(data=data_config_path)
-    # write results to some structured file
-
-def run_pipeline(pipeline_config):
-    # get path for YOLO data config file
-    data_config_path = os.path.join(os.path.dirname(__file__), '..', 'data_config.yaml')
-
-    # run_preprocessing(imgsz: int, approach: ApproachType, stride: int, train_split: int, clear_data: Boolean, target_classes: [int])
-    run_preprocessing(pipeline_config['preprocessing_params']) 
-
-    # run_finetuning(epochs: int, imgsz: int, model: str, data_config_path: str)
-    run_finetuning(pipeline_config['train_params'], data_config_path)
-
-    # run_eval_on_initial_resolutions(search_grid: [int], enable_eval: false, data_config_path: str)
-    #run_eval_on_initial_resolutions(pipeline_config['eval_params'], data_config_path, ft_model)
-
-    # TODO: run_optimizer(data_config_path, ft_model)
-    # in a loop: 
-    #  optimizer calls elbow fn and decides if another datapoint is needed (continue or return next_res)
-    #  generate degraded set
-    #  set path in data config to res_path
-    #  run eval and write to results file 
-
-    # generate_report()
-    generate_report(pipeline_config['report_params'])
-
-    print("Pipeline Finished.")
+# Ensure the script runs only when executed directly (not when imported as a module)
+if __name__ == "__main__":
+    main()
