@@ -1,7 +1,7 @@
 # Execution flow parameters
-# run_clean: true # default false, deletes the output directory
-# run_preprocess: true # default false
-# run_train: true # default false
+run_clean: true # default false, deletes the output directory
+run_preprocess: true # default false
+run_train: true # default false
 run_knee_discovery: true # default false
 # run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
 generate_report: true # default false
