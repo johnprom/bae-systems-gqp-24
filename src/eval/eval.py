@@ -20,7 +20,6 @@ def get_model(config):
     
     return model_dict
 
-# TODO: KENDALL: Write this method. No worries about changing anything. Just make it work.
 # This method calculates ONE data point on the IAPC
 def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path):
     """
