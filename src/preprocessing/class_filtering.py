@@ -21,6 +21,10 @@ def filter_classes(ctxt, target_class_ids: list[int]):
     write_to_annotations_filtered(ctxt, filtered_features)
     # map target class ids to class names for YOLO data config
     target_class_names = [get_class_name_from_id(ctxt, id_key) for id_key in target_class_ids]
+
+    # Store the class names in ctxt for use in knee_discovery.py
+    ctxt.class_names = target_class_names
+    
     # update YOLO data config
     update_data_config_class_names(ctxt, target_class_names)
     update_data_config_class_count(ctxt, len(target_class_names)) 
