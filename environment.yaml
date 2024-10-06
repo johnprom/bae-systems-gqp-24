@@ -13,7 +13,11 @@ dependencies:
   - numpy
   - opencv
   - matplotlib
+  - pypdf2
   - pip:
       - ultralytics  # YOLOv8 package
       - timm  # Swin Transformer (in the timm library)
       - geojson
+      - fpdf
+      - fpdf
+      - kneed
