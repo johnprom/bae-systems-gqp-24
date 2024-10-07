@@ -130,6 +130,76 @@ def calculate_knee(ctxt, iapc_results_filename):
     # eval_detection
     # write results to some structured file, coordinate with DAN
     # ALSO, could cache the results in ctxt (class Pipeline in src/pipeline.py). That would be very useful.
+
+import os
+from ultralytics import YOLO
+
+def train_yolov8(data_yaml_path, weights_path, img_size, batch_size, epochs):
+    if not os.path.exists(data_yaml_path):
+        raise FileNotFoundError(f"Dataset YAML file not found: {data_yaml_path}")
+
+    model = YOLO(weights_path)
+
+    print(f"Starting YOLOv8 training with image size: {img_size}")
+    model.train(
+        data=data_yaml_path,
+        imgsz=img_size,
+        epochs=epochs,
+        batch=batch_size,
+        cache=True
+    )
+    print("YOLOv8 training complete!")
+
+    return model
+
+def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path):
+    """
+    Run the model evaluation at a specific resolution and calculate mAP.
+    
+    Args:
+    - ctxt: The pipeline context object.
+    - baseline_image_size: Tuple of (width, height) of the baseline images.
+    - degraded_image_size: Tuple of (width, height) of the degraded images.
+    - val_degraded_dir_path: Path to the validation images for the current resolution.
+    
+    Returns:
+    - mAP: Mean Average Precision of the model for this resolution.
+    """
+    
+    config = ctxt.get_pipeline_config()
+    data_config_path = ctxt.get_data_config_dir_path()
+    top_dir = ctxt.get_top_dir()
+    
+    # retreive model settings
+    model_dict = get_model(config)
+    input_image_size = model_dict['input_image_size']
+    num_epochs = model_dict['epochs']
+    batch_size = model_dict.get('batch_size', 16)  # default to 16 if not specified
+    
+    weights_path = os.path.join(top_dir, config['pretrained_models_subdir'], model_dict['pretrained_weights'])
+    
+    # train the model
+    model = train_yolov8(data_config_path, weights_path, baseline_image_size, batch_size, num_epochs)
+    
+    # Run evaluation
+    results = model.val(data=data_config_path, imgsz=degraded_image_size)
+    
+    # Retrieve mAP from the evaluation results
+    mAP = results.box.map  # Access mAP for object detection
+    
+    # log results to a structured file 
+    update_results(ctxt, baseline_image_size, degraded_image_size, mAP)
+    
+    # cache the results in ctxt
+    if not hasattr(ctxt, 'eval_results'):
+        ctxt.eval_results = []
+    ctxt.eval_results.append({
+        'baseline_size': baseline_image_size,
+        'degraded_size': degraded_image_size,
+        'mAP': mAP
+    })
+    
+    return mAP  # return the mAP value for resolution
     
 
 
