@@ -3,18 +3,18 @@ run_clean: true # default false, deletes the output directory
 run_preprocess: true # default false
 run_train: true # default false
 run_knee_discovery: true # default false
-# run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
+run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
 generate_report: true # default false
 #
 #
 # Global parameters
 #
-# top_dir: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24" # top-level directory
-# default to one directory up from the pipleline.py file, which should be the repository directory
+# top_dir: "../" # top-level directory
+# default to one directory up from the pipleline.py file, which usually will be the repository directory, but not necessarily
 #
 #data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
-data_config_filename: "data_config.yaml"
-# REQUIRED and MUST be either absolute path or based in the directory of pipeline.py
+data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
+data_config_eval_filename: "data_config_eval.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
 #
 input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from top_dir
 interim_images_subdir: "interim" # REQUIRED subdir from input_images_subdir
@@ -27,19 +27,19 @@ trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, s
 pixel_size: 0.3 # in meters
 
 target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
-  20: "Pickup Truck"
-  21: "Utility Truck"
-  23: "Truck"
-  24: "Cargo Truck"
-  # - [20, "Pickup Truck"]
-  # - [21, "Utility Truck"]
-  # - [23, "Truck"]
-  # - [24, "Cargo Truck"]
-#
+   20: "Pickup Truck"
+   21: "Utility Truck"
+   23: "Truck"
+   24: "Cargo Truck"
+#    - [20, "Pickup Truck"]
+#    - [21, "Utility Truck"]
+#    - [23, "Truck"]
+#    - [24, "Cargo Truck"]
+# #
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time
 #
-preprocess_method: "padding" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
 # Either "tiling" or "padding", reflected by the options in preprocess_methods below
 #
 # Module-specific parameters
@@ -109,14 +109,18 @@ preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be spe
     # REQUIRED FOR PADDING METHOD
 #
 models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be specified and MUST match model: keyword above
-  yolov8m: # User-specified model name (can be any string)
+  yolov8m: # User-specified model name (can be anything)
+    name: 'yolov8m' # (must start with 'yolo' if in the YOLO family, and this is the only family supported)
     pretrained: # Specifies use of a pretrained model
       library: "ultralytics" # not used, here for reference
-      name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
-    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/model.pt" # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+      trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
+    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/{batch}/{freeze}/model.pt" # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
-    # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
-    input_image_size: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
-    # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
-    # That is, preprocess_methods:<method>:image_size
-    epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+    params:
+      # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+      imgsz: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
+      # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
+      # That is, preprocess_methods:<method>:image_size
+      epochs: 1 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+      batch: 16
+      freeze: [0, 1, 2, 3, 4, 5, 6]
