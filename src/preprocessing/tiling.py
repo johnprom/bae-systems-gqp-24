@@ -33,9 +33,11 @@ def tiling(ctxt):
     # TODO: AMIT: This needs to be changed to the specific label we are looking for. 
     # Maybe needs to be added to pipeline_config.yaml? Coordinate with DAN and KENDALL and GABE.
     # For now just use the first label in target_labels in the pipeline_config.yaml file
-    target_label = list(config['target_labels'].keys())[0] 
+    target_labels = list(config['target_labels'].keys())
 
-    result_dict = tiler.get_class_wise_data(features, ctxt.input_images_dir, target_label)
+    result_dict = tiler.get_class_wise_data(features, ctxt.input_images_dir, target_labels)
+    
+    print(result_dict)
     # TODO: AMIT: The following code puts the .txt files in the same directory as the .png files (ctxt.interim_images_dir)
     # Is this okay? If not, add a configuration entry to pipeline_config.yaml file. Coordinate with DAN.
     tiler.tile_image_and_save(result_dict, ctxt.input_images_dir, ctxt.interim_images_dir, ctxt.interim_images_dir)

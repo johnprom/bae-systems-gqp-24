@@ -94,27 +94,30 @@ class XViewTiler:
                 yolo_bbox = ' '.join([str(x) for x in bbox])
                 f.write(f"{cls} {yolo_bbox}\n")
 
-    def get_class_wise_data(self, features, file_path, class_id):
+    def get_class_wise_data(self, features, file_path, class_id_list):
         """Filter class-wise data for a specific class."""
-        if class_id not in xview_class2index:
-            print(f"Class ID {class_id} does not exist in the label dictionary.")
-            return {}
+        for class_id in class_id_list:
+            if class_id not in xview_class2index:
+                print(f"Class ID {class_id} does not exist in the label dictionary.")
+                return {}
 
         data_dict = {}
         for filename in os.listdir(file_path):
             if filename.endswith('.tif'):
                 image_path = os.path.join(file_path, filename)
                 bounding_boxes = []
-                for feature in features:
-                    if feature['properties'].get('image_id') == filename and feature['properties'].get('type_id') == class_id:
-                        bounds_str = feature['properties']['bounds_imcoords']
-                        coordinates = list(map(int, bounds_str.split(',')))
-                        bounding_boxes.append({
-                            'class_id': feature['properties'].get('type_id'),
-                            'coordinates': coordinates
-                        })
-                if bounding_boxes:
-                    data_dict[filename] = bounding_boxes
+                for new_class_id, class_id in enumerate(class_id_list):
+                    for feature in features:
+                        if feature['properties'].get('image_id') == filename and feature['properties'].get('type_id') == class_id:
+                            bounds_str = feature['properties']['bounds_imcoords']
+                            coordinates = list(map(int, bounds_str.split(',')))
+                            bounding_boxes.append({
+                                # 'class_id': feature['properties'].get('type_id'),
+                                'class_id': new_class_id,
+                                'coordinates': coordinates
+                            })
+                    if bounding_boxes:
+                        data_dict[filename] = bounding_boxes
         return data_dict
 
     def tile_image_and_save(self, data_dict, file_path, output_img_dir, output_lbl_dir):
@@ -145,7 +148,7 @@ class XViewTiler:
                     tile_classes = []
 
                     for annotation in annotations:
-                        cls = annotation['class_id']
+                        cls_id = annotation['class_id']
                         bbox = annotation['coordinates']
 
                         if (bbox[0] >= x_start and bbox[2] <= x_end) and (bbox[1] >= y_start and bbox[3] <= y_end):
@@ -156,7 +159,7 @@ class XViewTiler:
                                 bbox[3] - y_start
                             ]
                             tile_bboxes.append(self.convert_bbox_to_yolo_format(adjusted_bbox, self.tile_size, self.tile_size))
-                            tile_classes.append(cls)
+                            tile_classes.append(cls_id)
 
                     if tile_bboxes:
                         tile_filename = f"{img_id.split('.')[0]}_{x}_{y}.png"
