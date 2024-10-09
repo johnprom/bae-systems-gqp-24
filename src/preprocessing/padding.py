@@ -61,10 +61,23 @@ def adjust_bboxes_and_convert_to_yolo(bboxes, left_padding, top_padding, origina
 
     return adjusted_bboxes
 
+def find_max_image_size(image_folder):
+    """ Find the maximum dimensions among all images in the folder """
+    max_width = 0
+    max_height = 0
+    for filename in os.listdir(image_folder):
+        if filename.endswith('.tif'):
+            image_path = os.path.join(image_folder, filename)
+            with Image.open(image_path) as img:
+                if img.width > max_width:
+                    max_width = img.width
+                if img.height > max_height:
+                    max_height = img.height
+    max_side = max(max_width, max_height)
+    return (max_side + 31) // 32 * 32 # round up to the nearest multiple of 32
+
 # Padding function that incorporates annotations
 def padding_and_annotation_adjustment(ctxt):
-    config = ctxt.get_pipeline_config()  # Get configuration
-    
     input_folder = ctxt.input_images_dir
     labels_folder = ctxt.filtered_annotations_dir  # Folder for filtered annotations
     output_folder = ctxt.interim_images_dir  # Folder for processed images and annotations

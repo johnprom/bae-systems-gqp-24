@@ -21,6 +21,13 @@ def update_yaml_file(ctxt, update_field, new_value):
     with open(data_config_path, 'w') as file:
         yaml.dump(data, file)
 
+    data_config_path = ctxt.get_data_config_eval_dir_path()
+    with open(data_config_path, 'r') as file:
+        data = yaml.safe_load(file)
+    data[update_field] = new_value
+    with open(data_config_path, 'w') as file:
+        yaml.dump(data, file)
+
 def update_data_config_train_path(ctxt, path):
     update_yaml_file(ctxt, 'train', path)
 
@@ -32,6 +39,7 @@ def update_data_config_class_count(ctxt, class_count):
 
 def update_data_config_class_names(ctxt, class_list):
     update_yaml_file(ctxt, 'names', class_list)
+    ctxt.class_names = class_list
 
 def load_class_mappings(ctxt):
     json_file_path = os.path.join(ctxt.get_input_images_dir_path(), ctxt.config['input_class_labels_filename'])

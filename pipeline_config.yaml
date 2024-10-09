@@ -1,9 +1,7 @@
 # Execution flow parameters
-run_clean: true # default false, deletes the output directory
-run_preprocess: true # default false
-run_train: true # default false
+# run_preprocess: true # default false
+# run_train: true # default false
 run_knee_discovery: true # default false
-run_detection: true # NOT SUPPORTED YET, can be run alone to get one datapoint, but otherwise knee_discovery will run detection
 generate_report: true # default false
 #
 #
@@ -11,6 +9,8 @@ generate_report: true # default false
 #
 # top_dir: "../" # top-level directory
 # default to one directory up from the pipleline.py file, which usually will be the repository directory, but not necessarily
+#
+# run_clean: true # default false, deletes the output directory
 #
 #data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
 data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
@@ -46,13 +46,17 @@ preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing meth
 preprocess:
   output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
   filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preoprocess:output_subdir
-  clean_subdir: true # wipes out the preprocess output_subdir, default false
+  # clean_subdir: true # wipes out the preprocess output_subdir, default false
   train_split: 0.8 # REQUIRED FOR PREPROCESSING
 train:
   clean_subdir: true # Code needs to be added for this
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
-  clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
+  clean_subdir: false # wipes out the knee_discovery:output_subdir above, default false
+  cache_results: true # Results are cached in memory to improve performance, default false
+  use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
+  # ONLY used if knee_discovery is being run without preprocessing or training
+  eval_results_filename: "iapc_results.csv" # REQUIRED the accumulative results file, must be a csv
   clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
@@ -81,12 +85,12 @@ preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be spe
     stride: 100 # REQUIRED FOR TILING METHOD
     #
     # these following directories are subdir from preprocess:output_dir
-    train_baseline_subdir: "baseline/train/tiling/{width}_{height}/{stride}" # REQUIRED FOR TILING METHOD
-    val_baseline_subdir: "baseline/val/tiling/{width}_{height}/{stride}" # REQUIRED FOR TILING METHOD
-    train_degraded_subdir: "degraded/train/tiling/{width}_{height}/{stride}/{effective_width}_{effective_height}"
+    train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+    train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
     # REQUIRED FOR TILING METHOD
     #
-    val_degraded_subdir: "degraded/val/tiling/{width}_{height}/{stride}/{effective_width}_{effective_height}"
+    val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
     # REQUIRED FOR TILING METHOD
     #
     output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
@@ -114,7 +118,7 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
     pretrained: # Specifies use of a pretrained model
       library: "ultralytics" # not used, here for reference
       trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
-    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/{batch}/{freeze}/model.pt" # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/{batch}/{freeze}/model.pt"
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
     params:
       # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY

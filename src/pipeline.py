@@ -1,6 +1,7 @@
 # from yolov8.ultralytics.ultralytics import YOLO (for if you have yolo src code locally)
 import argparse
 import os
+import pandas as pd
 import pprint
 import shutil
 
@@ -35,7 +36,39 @@ class Pipeline:
         
         self.maxwidth = 0
         self.maxheight = 0
+        
+        self.set_final_weights_path()
 
+        self.train_labels_to_xview = {}
+        self.xview_to_train_labels = {}
+        self.target_labels = list(self.config['target_labels'].keys())
+        self.xview_names = list(self.config['target_labels'].values())
+        for idx, label in enumerate(self.target_labels):
+            self.train_labels_to_xview[idx] = {
+                'xview_type_id': label,
+                'xview_name': self.xview_names[idx]
+                }
+            self.xview_to_train_labels[label] = {
+                'train_type_id': idx,
+                'train_name': self.xview_names[idx]
+                }
+        self.train_labels = list(range(len(self.target_labels)))
+        self.train_names = self.xview_names.copy()
+
+        self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
+                             'effective_resolution_height', 'mAP', 'knee']
+        # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
+        self.results_cache_df = None
+        self.cache_results = False
+        if 'run_knee_discovery' in self.config and self.config['run_knee_discovery']:
+            if 'cache_results' in self.config['knee_discovery'] and self.config['knee_discovery']['cache_results']:
+                self.cache_results = True
+                
+        self.class_names = None
+    
+        if 'run_clean' in self.config and self.config['run_clean']:
+            self.run_clean()
+            
     def get_pipeline_config(self):
         return self.config
     
@@ -44,6 +77,9 @@ class Pipeline:
             return self.config['top_dir']
         return os.path.join(os.path.dirname(__file__), '..')
 
+    def get_data_config_eval_dir_path(self):
+        return os.path.join(self.get_top_dir(), self.config['data_config_eval_filename'])
+        
     def get_data_config_dir_path(self):
         return os.path.join(self.get_top_dir(), self.config['data_config_filename'])
         
@@ -65,6 +101,110 @@ class Pipeline:
     def get_train_geojson_filename(self):
         return os.path.join(self.get_input_images_dir_path(), self.config['input_images_labels_filename'])
     
+    def get_model_name(self):
+        if 'model' not in self.config or 'models' not in self.config:
+            raise ValueError(f"deep learning model uspecified in configuration file.")            
+        model_name = self.config['model']
+        if model_name not in self.config['models']:
+            raise ValueError(f"unkown deep learning model {model_name} specified.")
+        return model_name
+    
+    def get_yolo_id(self):
+        params = self.get_model_params()
+        return params['name']
+    
+    def get_model_params(self):
+        model_name = self.get_model_name()
+        if model_name not in self.config['models']:
+            raise ValueError(f"unkown deep learning model {model_name} specified.")            
+        model_dict = self.config['models'][model_name]
+        return model_dict
+    
+    def get_train_labels_from_target_labels(self, target_labels):
+        return [self.get_train_label_from_xview_label(xvl) for xvl in target_labels]
+    
+    def get_train_label_from_xview_label(self, xview_label):
+        return self.xview_to_train_labels[xview_label]['train_type_id']
+    
+    # def get_model_id(self):
+    #     model_dict = self.get_model_params()
+    #     if self.get_model_name() not in model_dict:
+    #         raise ValueError(f"deep learning model {self.get_model_name()} not in 'models' in yaml configuration file")
+    #     if 'name' not in model_dict:
+    #         raise ValueError(f"YOLO deep learning model id not specified")
+    #     return model_dict['id']
+
+    def set_final_weights_path(self):
+        if not self.is_model_yolo():
+            ve = f"unknown deep learning model {self.get_model_name()} specified."
+            raise ValueError(ve)
+    
+        # yolo_id = ctxt.get_yolo_id()
+        model_name = self.config['model']
+        model_dict = self.config['models'][model_name]
+        model_params = model_dict['params']
+        # base_model = YOLO(yolo_id)
+        
+        trained_model_filename_template = None
+        if 'trained_model_filename' in model_dict:
+            if 'trained_model_filename' != "":
+                trained_model_filename_template = model_dict['trained_model_filename']
+        if trained_model_filename_template is None:
+            self.final_weights_path = None
+            return
+        
+        # input_width = model_params['imgsz']
+        # input_height = input_width
+        # # input_width, input_height = model_dict['input_image_size'][0], model_dict['input_image_size'][1]
+        # num_epochs = model_params['epochs']
+        # batch_size = model_params['batch']
+        
+        # TODO: KENDALL? GABE? DAN?
+        # Train your model here. The following is just dummy code
+        
+        # model_params['data'] = self.config['data_config_path']
+        # train_params = ctxt.config['models']
+        # train_params = {
+        # 'data': 'data_config_path
+        # 'epochs': num_epochs,
+        # 'imgsz': input_width,
+        # 'batch': 16,              # Batch size
+        # 'freeze': [0, 1, 2, 3, 4, 5, 6],  # Freeze first 7 layers (backbone)
+        # }
+        
+        # ft_model = base_model.train(data=data_config_path, epochs=num_epochs, imgsz=input_width, batch=16, freeze=list(range(7)))
+        # ft_model = base_model.train(**model_params)
+    
+        self.final_weights_path = os.path.join(
+            self.get_top_dir(), self.config['trained_models_subdir'], 
+            trained_model_filename_template.format(width=model_params['imgsz'], 
+                                                   height=model_params['imgsz'],
+                                                   epochs=model_params['epochs'],
+                                                   batch=model_params['batch'],
+                                                   freeze='_'.join(map(str, model_params['freeze']))))
+        
+    def is_model_yolo(self):
+        yolo_id = self.get_model_name()
+        print(yolo_id, type(yolo_id), flush=True)
+        if type(yolo_id) == str and yolo_id.startswith('yolo'):
+            return True
+        return False
+    
+    def use_eval_cache(self):
+        if 'run_clean' in self.config and self.config['run_clean']:
+            return False
+        if "run_preprocess" in self.config and self.config["run_preprocess"]:
+            return False
+    
+        if "run_train" in self.config and self.config["run_train"]:
+            return False
+        
+        if "run_knee_discovery" in self.config and self.config["run_knee_discovery"]:
+            if 'knee_discovery' in self.config and 'use_eval_cache' in self.config['knee_discovery']:
+                return self.config['knee_discovery']['use_eval_cache']
+
+        return False        
+    
     def run_clean(self):
         # remove output directory if exists
         # This does NOT delete preprocessed images and not tuned models either
@@ -81,9 +221,6 @@ class Pipeline:
     def run_pipeline(self):
         
         pipeline_config = self.config
-    
-        if "run_clean" in pipeline_config and pipeline_config["run_clean"]:
-            self.run_clean()
     
         if "run_preprocess" in pipeline_config and pipeline_config["run_preprocess"]:
             run_preprocessing(self)

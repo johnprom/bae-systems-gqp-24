@@ -7,6 +7,11 @@ Created on Tue Oct  1 13:21:55 2024
 """
 import math
 import os
+import pandas as pd
+from ultralytics import YOLO
+
+from util.util import load_pipeline_config
+# from knee_discovery.knee_discovery import calc_degradation_factor
 
 def get_model(config):
     if 'model' not in config or 'models' not in config:
@@ -20,51 +25,7 @@ def get_model(config):
     
     return model_dict
 
-# This method calculates ONE data point on the IAPC
-def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path):
-    """
-    Run the model evaluation at a specific resolution and calculate mAP.
-    
-    Args:
-    - baseline_image_size: Tuple of (width, height) of the baseline images.
-    - degraded_image_size: Tuple of (width, height) of the degraded images.
-    - val_degraded_dir_path: Path to the validation images for the current resolution.
-    
-    Returns:
-    - mAP: Mean Average Precision of the model for this resolution.
-    """
-    
-    config = ctxt.get_pipeline_config()
-    data_config_path = ctxt.get_data_config_dir_path()
-    top_dir = ctxt.get_top_dir()
-    
-    # Get the trained model and settings
-    model_dict = get_model(config)
-    input_image_size = model_dict['input_image_size']
-    input_width = input_image_size
-    input_height = input_image_size
-    num_epochs = model_dict['epochs']
-    
-    trained_model_filename_template = model_dict['trained_model_filename']
-    trained_model_filename = os.path.join(top_dir, config['trained_models_subdir'],
-                                          trained_model_filename_template.format(
-                                              width=baseline_image_size[0], height=baseline_image_size[1], epochs=num_epochs))
-    
-    # Load the trained model for evaluation
-    model = YOLO(trained_model_filename)  # Load the model using the path to the fine-tuned model
-    
-    # Run evaluation
-    results = model.val(data=data_config_path, imgsz=degraded_image_size)  # Evaluate on degraded images
-    
-    # Retrieve mAP from the evaluation results
-    mAP = results['map']  # Assuming 'map' key contains the mean Average Precision
-    
-    # Log results to a structured file (for future analysis)
-    update_results(ctxt, baseline_image_size, degraded_image_size, mAP)
-    
-    return mAP  # Return the mAP value for this resolution
-
-def update_results(ctxt, orig_image_size, degraded_image_size, mAP):
+def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_size, mAP_list, is_knee):
     """
     Log the evaluation results (mAP and image sizes) for knee discovery.
     
@@ -74,20 +35,42 @@ def update_results(ctxt, orig_image_size, degraded_image_size, mAP):
     - mAP: Mean Average Precision of the model for this resolution.
     """
     
+    # IAPC results file columns
+    # iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
+    #                 'effective_resolution_height', 'mAP', 'degration_factor', 'knee']
+    
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
     os.makedirs(results_path, exist_ok=True)
 
     # Log results to the results file (CSV or text)
-    iapc_results_filename = os.path.join(results_path, "iapc_results.csv")
-    
-    # Append results (resolution and mAP) to CSV file
-    with open(iapc_results_filename, 'a') as file:
-        file.write(f"{orig_image_size[0]}x{orig_image_size[1]}, {degraded_image_size[0]}x{degraded_image_size[1]}, {mAP}\n")
-    
-    print(f"Logged IAPC results: Original {orig_image_size}, Degraded {degraded_image_size}, mAP {mAP}")
+    eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
 
+    if ctxt.results_cache_df:
+        if ctxt.results_cache_df is None:
+            ctxt.results_cache_df = pd.DataFrame(columns=ctxt.iapc_columns)
+            rcdf = ctxt.results_cache_df
+        else:
+            rcdf = ctxt.results_cache_df
+    elif os.path.exists(eval_results_filename):
+        rcdf = pd.read_csv(eval_results_filename)
+    else:
+        rcdf = pd.DataFrame(columns=ctxt.iapc_columns)
+        
+    for idx in range(num_names):
+    # for idx, name in enumerate(name_list):
+        degradation_factor = calc_degradation_factor(orig_image_size[0], orig_image_size[1],
+                                                     degraded_image_size[0], degraded_image_size[1])
+        # degradation_factor = calc_degradation_factor(orig_image_size, orig_image_size, degraded_image_size, degraded_image_size)
+        rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
+                                   degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
+        print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
+              + "mAP {mAP_list[idx]}, knee {is_knee}")
+    
+    
+    rcdf.to_csv(eval_results_filename)
+    
 # This function is used to calculate the knee after multiple runs
 def calculate_knee(ctxt, iapc_results_filename):
     """
@@ -117,40 +100,23 @@ def calculate_knee(ctxt, iapc_results_filename):
     knee_point = kneedle.knee
     print(f"Knee detected at resolution {knee_point}")
     
-    # Optionally log the knee point to a file 
+    # Log the knee point to a file 
     with open(os.path.join(ctxt.get_output_dir_path(), "knee_results.txt"), 'a') as knee_file:
         knee_file.write(f"Knee detected at resolution {knee_point}\n")
     
     return knee_point
 
-    # TODO: KENDALL: Here run the evaluation code, calculating ONE data point on the IAPC
-    # method = config['eval_method'] # detection or classification, only detection supported right now, so maybe leave this
-    # comment in here or take this comment out entirely
-    # results = run model here, stored in traine_model_filename, config['target_labels'], put result into trained_modelfilename
-    # eval_detection
-    # write results to some structured file, coordinate with DAN
-    # ALSO, could cache the results in ctxt (class Pipeline in src/pipeline.py). That would be very useful.
-
-import os
-from ultralytics import YOLO
-
-def train_yolov8(data_yaml_path, weights_path, img_size, batch_size, epochs):
-    if not os.path.exists(data_yaml_path):
-        raise FileNotFoundError(f"Dataset YAML file not found: {data_yaml_path}")
-
-    model = YOLO(weights_path)
-
-    print(f"Starting YOLOv8 training with image size: {img_size}")
-    model.train(
-        data=data_yaml_path,
-        imgsz=img_size,
-        epochs=epochs,
-        batch=batch_size,
-        cache=True
-    )
-    print("YOLOv8 training complete!")
-
-    return model
+def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
+    # orig_res_w = IAPC_df['original_resolution_width'].astype(float)
+    # orig_res_h = IAPC_df['original_resolution_height'].astype(float)
+    # eff_res_w = IAPC_df['effective_resolution_width'].astype(float)
+    # eff_res_h = IAPC_df['effective_resolution_height'].astype(float)
+    
+    degradation_factor_w = eff_res_w / orig_res_w
+    degradation_factor_h = eff_res_h / orig_res_h
+    degradation_factor = math.sqrt(degradation_factor_w * degradation_factor_h)
+    # IAPC_df['degradation_factor'] = degradation_factor
+    return degradation_factor # pd.Series
 
 def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path):
     """
@@ -166,40 +132,25 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     - mAP: Mean Average Precision of the model for this resolution.
     """
     
-    config = ctxt.get_pipeline_config()
-    data_config_path = ctxt.get_data_config_dir_path()
-    top_dir = ctxt.get_top_dir()
+    data_config_eval_path = ctxt.get_data_config_eval_dir_path()
+    data_config_eval = load_pipeline_config(data_config_eval_path)
     
-    # retreive model settings
-    model_dict = get_model(config)
-    input_image_size = model_dict['input_image_size']
-    num_epochs = model_dict['epochs']
-    batch_size = model_dict.get('batch_size', 16)  # default to 16 if not specified
-    
-    weights_path = os.path.join(top_dir, config['pretrained_models_subdir'], model_dict['pretrained_weights'])
-    
-    # train the model
-    model = train_yolov8(data_config_path, weights_path, baseline_image_size, batch_size, num_epochs)
+    if ctxt.final_weights_path is None or ctxt.final_weights_path == "" or not os.path.exists(ctxt.final_weights_path):
+        model_to_use = ctxt.get_model_name()
+    else:
+        model_to_use = ctxt.final_weights_path
+    model = YOLO(model_to_use)
     
     # Run evaluation
-    results = model.val(data=data_config_path, imgsz=degraded_image_size)
+    results = model.val(data=data_config_eval_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache())
     
     # Retrieve mAP from the evaluation results
-    mAP = results.box.map  # Access mAP for object detection
+    print(f"type of maps return is {type(results.box.maps)}")
+    print(f"{results.box.maps}")
+    mAP_list = list(results.box.maps)  # Access mAP for object detection
     
     # log results to a structured file 
-    update_results(ctxt, baseline_image_size, degraded_image_size, mAP)
+    update_results(ctxt, data_config_eval['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list, "unknown")
     
-    # cache the results in ctxt
-    if not hasattr(ctxt, 'eval_results'):
-        ctxt.eval_results = []
-    ctxt.eval_results.append({
-        'baseline_size': baseline_image_size,
-        'degraded_size': degraded_image_size,
-        'mAP': mAP
-    })
-    
-    return mAP  # return the mAP value for resolution
-    
-
+    return mAP_list  # return the mAP value for resolution
 

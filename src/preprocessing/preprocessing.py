@@ -4,7 +4,7 @@ import random
 import shutil
 from util.util import update_data_config_train_path, update_data_config_val_path
 from preprocessing.tiling import tiling
-from preprocessing.padding import padding
+from preprocessing.padding import padding_and_annotation_adjustment
 from preprocessing.class_filtering import filter_classes
 
 # TODO: Move larger method to their own files
@@ -63,7 +63,7 @@ def run_preprocessing(ctxt):
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_preprocessing_dir_path()
 
-    if config['preprocess']['clean_subdir']:
+    if 'clean_subdir' in config['preprocess'] and config['preprocess']['clean_subdir']:
         if os.path.exists(output_top_dir):
             shutil.rmtree(output_top_dir)
 
@@ -89,7 +89,7 @@ def run_preprocessing(ctxt):
     # Method-specific code    
     # use ctxt.interim_images_dir to temporarily place preprocessed files prior to train_test_split
     if method == 'padding':
-        ctxt.maxwidth, ctxt.maxheight = padding(ctxt) # Write padding code in this method in padding.py
+        ctxt.maxwidth, ctxt.maxheight = padding_and_annotation_adjustment(ctxt) 
         ctxt.train_baseline_dir = os.path.join(preprocess_top_dir, train_template.format(maxwidth=ctxt.maxwidth, 
                                                                                          maxheight=ctxt.maxheight))
         ctxt.val_baseline_dir = os.path.join(preprocess_top_dir, val_template.format(maxwidth=ctxt.maxwidth, 
@@ -101,9 +101,10 @@ def run_preprocessing(ctxt):
         ctxt.maxheight = image_size
         stride = params['stride']
         ctxt.train_baseline_dir = os.path.join(preprocess_top_dir, 
-                                               train_template.format(width=ctxt.maxwidth, height=ctxt.maxheight, stride=stride))
+                                               train_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, 
+                                                                     stride=stride))
         ctxt.val_baseline_dir = os.path.join(preprocess_top_dir, 
-                                             val_template.format(width=ctxt.maxwidth, height=ctxt.maxheight, stride=stride))
+                                             val_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, stride=stride))
     else:
         raise ValueError("Unknown preprocessing method: " + method)
 

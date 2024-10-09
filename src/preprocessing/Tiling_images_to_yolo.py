@@ -94,7 +94,7 @@ class XViewTiler:
                 yolo_bbox = ' '.join([str(x) for x in bbox])
                 f.write(f"{cls} {yolo_bbox}\n")
 
-    def get_class_wise_data(self, features, file_path, class_id_list):
+    def get_class_wise_data(self, features, file_path, class_id_list, train_id_list):
         """Filter class-wise data for a specific class."""
         for class_id in class_id_list:
             if class_id not in xview_class2index:
@@ -113,7 +113,7 @@ class XViewTiler:
                             coordinates = list(map(int, bounds_str.split(',')))
                             bounding_boxes.append({
                                 # 'class_id': feature['properties'].get('type_id'),
-                                'class_id': new_class_id,
+                                'class_id': train_id_list[new_class_id],
                                 'coordinates': coordinates
                             })
                     if bounding_boxes:
