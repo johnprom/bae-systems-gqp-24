@@ -32,7 +32,7 @@ def tiling(ctxt):
     
     result_dict = tiler.get_class_wise_data(features, ctxt.input_images_dir, ctxt.target_labels, ctxt.train_labels)
     
-    print(result_dict)
+    # print(result_dict)
     # TODO: AMIT: The following code puts the .txt files in the same directory as the .png files (ctxt.interim_images_dir)
     # Is this okay? If not, add a configuration entry to pipeline_config.yaml file. Coordinate with DAN.
     tiler.tile_image_and_save(result_dict, ctxt.input_images_dir, ctxt.interim_images_dir, ctxt.interim_images_dir)

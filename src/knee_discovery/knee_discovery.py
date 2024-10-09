@@ -12,6 +12,7 @@ import numpy as np
 import os
 import pandas as pd
 import shutil
+import sys
 
 from kneed import KneeLocator
 from PIL import Image
@@ -52,6 +53,7 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir):
     # config = ctxt.get_pipeline_config()
     # data_config_path = ctxt.get_data_config_dir_path()
 
+    print(f"degrade images {orig_image_size} -> {degraded_image_size} in degraded directory {degraded_dir}")
     config = ctxt.config
 
     method = config['preprocess_method']
@@ -82,6 +84,7 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir):
         image = Image.open(val_image)
         val_shrunk_image = image.resize(degraded_image_size)
         val_degraded_image = val_shrunk_image.resize(orig_image_size)
+        val_degraded_image.show()
         val_degraded_image.save(os.path.join(degraded_dir, val_image))
         image.close()
         val_shrunk_image.close()
@@ -104,6 +107,8 @@ def run_eval_on_initial_resolutions(ctxt):
 
 
 def run_eval_on_degraded_images(ctxt):
+    if ctxt.verbose:
+        print("Start run_eval_on_degraded_images")
     config = ctxt.get_pipeline_config()
     preprocess_method = config['preprocess_method']
     pp_params = config['preprocess_methods'][preprocess_method]
@@ -128,6 +133,8 @@ def run_eval_on_degraded_images(ctxt):
 
     # results = []
 
+    if ctxt.verbose:
+        print(f"degrading images from {long_low_range} to {long_high_range} step {step}")
     for degraded_long_res in range(long_low_range, long_high_range, step):
         degraded_short_res = math.ceil(shorter_mult * degraded_long_res)
         degraded_width = degraded_long_res if width == longer else degraded_short_res
@@ -135,13 +142,12 @@ def run_eval_on_degraded_images(ctxt):
 
         # Create directory path for degraded images
         val_degraded_dir = os.path.join(ctxt.get_preprocessing_dir_path(), val_template.format(
-            maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight,
-            effective_width=degraded_width, effective_height=degraded_height, stride=stride))
+            maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
 
         # Degrade images and run evaluation
         degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
         # TODO: SHUBHAM: I think you will implement your knee discovery algorithm here
-        # mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
+        mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
 
     #     # Store results in list
     #     results.append({
@@ -197,14 +203,21 @@ def calculate_knee(class_name, results_class_df):
     orig_res_h = results_class_df['original_resolution_height'].astype(float)
     eff_res_w = results_class_df['effective_resolution_width'].astype(float)
     eff_res_h = results_class_df['effective_resolution_height'].astype(float)
-    degradation_factor = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h).to_list()
+    degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
+    print(f"type(degradation_factor_series) is {type(degradation_factor_series)}, shape {degradation_factor_series.shape}")
+    mAP_values_series = results_class_df['mAP']
+    print(f"type(mAP_values_series) is {type(mAP_values_series)}, shape {mAP_values_series.shape}")
+    degradation_factor_list = degradation_factor_series.to_list()
+    print(f"type(degradation_factor_list) is {type(degradation_factor_list)}, length {len(degradation_factor_list)}")
+    
     mAP_values = results_class_df['mAP'].to_list()
+    print(f"type(mAP_values) is {type(mAP_values)}, length {len(mAP_values)}")
     # if math.isclose(a, b, abs_tol=1e-7):
 
     # iapc_values = [1/mAP for mAP in mAP_values]
 
     # Use KneeLocator to find the knee
-    kneedle = KneeLocator(degradation_factor, mAP_values, curve='convex', direction='increasing')
+    kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='convex', direction='increasing')
     knee_degradation_factor = kneedle.knee
     
     return knee_degradation_factor
@@ -269,8 +282,8 @@ def run_knee_discovery(ctxt):
         eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
         if os.path.exists(eval_results_filename):
             results_df = pd.read_csv(eval_results_filename)
-        else:
-            print(f"Knee discovery: expected {eval_results_filename} not found!")
+        else: 
+            print(f"Knee discovery: {eval_results_filename} not found!")
             return
         # results = results_df.to_dict('records')
 
