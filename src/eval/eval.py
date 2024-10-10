@@ -36,8 +36,8 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
     """
     
     # IAPC results file columns
-    # iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
-    #                 'effective_resolution_height', 'mAP', 'degration_factor', 'knee']
+    # self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
+    #                      'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
     
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_output_dir_path()
@@ -47,14 +47,14 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
     # Log results to the results file (CSV or text)
     eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
 
-    if ctxt.results_cache_df:
+    if ctxt.cache_results:
         if ctxt.results_cache_df is None:
             ctxt.results_cache_df = pd.DataFrame(columns=ctxt.iapc_columns)
-            rcdf = ctxt.results_cache_df
+            rcdf = ctxt.results_cache_df.copy()
         else:
-            rcdf = ctxt.results_cache_df
+            rcdf = ctxt.results_cache_df.copy()
     elif os.path.exists(eval_results_filename):
-        rcdf = pd.read_csv(eval_results_filename)
+        rcdf = pd.read_csv(eval_results_filename, index_col=False)
     else:
         rcdf = pd.DataFrame(columns=ctxt.iapc_columns)
         
@@ -63,13 +63,17 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
         degradation_factor = calc_degradation_factor(orig_image_size[0], orig_image_size[1],
                                                      degraded_image_size[0], degraded_image_size[1])
         # degradation_factor = calc_degradation_factor(orig_image_size, orig_image_size, degraded_image_size, degraded_image_size)
+        rcdf_list = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
+                                   degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
+        print(f"rcdf list length {len(rcdf_list)}, iapc columns length {len(ctxt.iapc_columns)}, rcdf length {rcdf.shape[1]}")
         rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
                                    degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
         print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
               + "mAP {mAP_list[idx]}, knee {is_knee}")
     
     
-    rcdf.to_csv(eval_results_filename)
+    rcdf.to_csv(eval_results_filename, index=False)
+    ctxt.results_cache_df = rcdf.copy()
     
 # This function is used to calculate the knee after multiple runs
 def calculate_knee(ctxt, iapc_results_filename):
@@ -87,7 +91,8 @@ def calculate_knee(ctxt, iapc_results_filename):
     import pandas as pd
     
     # Read the results into a pandas DataFrame
-    results_df = pd.read_csv(iapc_results_filename, header=None, names=['orig_resolution', 'degraded_resolution', 'mAP'])
+    results_df = pd.read_csv(iapc_results_filename, header=None, names=['orig_resolution', 'degraded_resolution', 'mAP'], 
+                             index_col=False)
     
     # Extract the degraded resolutions and mAP values
     degraded_resolutions = results_df['degraded_resolution'].apply(lambda x: int(x.split('x')[0]))  # Take the width as resolution

@@ -10,12 +10,8 @@ from preprocessing.preprocessing import run_preprocessing
 # from reports.reports import generate_report
 from train.train import run_finetuning
 from util.util import load_pipeline_config
+from reports.report import generate_report
 # import yaml
-
-# TODO: DAN Move generate_report out of this file
-
-def generate_report(ctxt):
-    print("Finished generating report (not supported yet): ")
 
 class Pipeline:
     def __init__(self, args):
@@ -56,7 +52,7 @@ class Pipeline:
         self.train_names = self.xview_names.copy()
 
         self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
-                             'effective_resolution_height', 'mAP', 'knee']
+                             'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
         # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
         self.results_cache_df = None
         self.cache_results = False
@@ -65,6 +61,7 @@ class Pipeline:
                 self.cache_results = True
                 
         self.class_names = None
+        self.val_image_set = None
     
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()

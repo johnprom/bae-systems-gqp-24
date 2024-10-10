@@ -1,5 +1,6 @@
+import datetime
 from fpdf import FPDF
-import math
+# import math
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import os
@@ -13,9 +14,16 @@ def generate_report(ctxt):
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
     results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
+    report_path = os.path.join(output_top_dir, config['report']['output_subdir'])
 
-    data_IAPC = pd.read_csv(results_filename)
+    os.makedirs(report_path, exist_ok=True)
     
+    data_IAPC = pd.read_csv(results_filename, index_col=False)
+    
+    # IAPC results file columns
+    # self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
+    #                      'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
+
     # Extract columns
     # object_name = data_IAPC['object_name']
     # orig_res_w = data_IAPC['original_resolution_width'].astype(float)
@@ -28,7 +36,10 @@ def generate_report(ctxt):
     # degradation_factor_h = eff_res_h / orig_res_h
     # degradation_factor_area = degradation_factor_w * degradation_factor_h
     # degradation_factor = degradation_factor_area.apply(math.sqrt)
-    data_IAPC['degradation_factor'] = calc_degradation_factor(data_IAPC)
+    data_IAPC['degradation_factor'] = calc_degradation_factor(data_IAPC['original_resolution_width'],
+                                                              data_IAPC['original_resolution_height'],
+                                                              data_IAPC['effective_resolution_width'],
+                                                              data_IAPC['effective_resolution_height'])
     
     curve_color = ['blue', 'green', 'orange', 'teal']
     knee_color = 'red'
@@ -83,7 +94,7 @@ def generate_report(ctxt):
     
     
     plt.grid(True)
-    plt.savefig('iap_curves.pdf')
+    plt.savefig(os.path.join(report_path, 'iap_curves.pdf'))
     plt.close()
     
     # Step 3: Create a PDF with explanatory text using FPDF
@@ -98,14 +109,17 @@ def generate_report(ctxt):
            + "The red-marked 'knee' points indicate a significant inflection point where the mAP performance starts to plateau."
            )
     pdf.multi_cell(0, 10, txt=txt)
-    pdf.output("iap_analysis.pdf")
+    pdf.output(os.path.join(report_path, "iap_analysis.pdf"))
     
     # Step 4: Merge the IAP curve and the analysis text into one PDF using PyPDF2
     merger = PdfMerger()
-    merger.append('iap_curves.pdf')
-    merger.append('iap_analysis.pdf')
-    merger.write('full_report.pdf')
+    merger.append(os.path.join(report_path, 'iap_curves.pdf'))
+    merger.append(os.path.join(report_path, 'iap_analysis.pdf'))
+    
+    full_report_filename = os.path.join(report_path, f'full_report_{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.pdf')
+    merger.write(full_report_filename)
     merger.close()
     
-    print("Full report generated: full_report.pdf")
+    
+    print(f"Full report generated: {full_report_filename}")
     

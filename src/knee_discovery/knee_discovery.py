@@ -44,7 +44,7 @@ exts = ('.tif', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')  # Common imag
 #     return maxwidth, maxheight
 
 
-def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir):
+def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, corrupted_counter):
     """
     Degrade images by resizing them and store them in the degraded_dir.
     For testing, this method is currently only copying images from baseline_dir to degraded_dir.
@@ -79,16 +79,31 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir):
     # baseline_dir = ctxt.val_baseline_dir
     os.makedirs(degraded_dir, exist_ok=True)
     
-    val_images = [os.path.join(val_baseline_dir, x) for x in os.listdir(val_baseline_dir) if x.endswith(exts)]
-    for val_image in val_images:
-        image = Image.open(val_image)
-        val_shrunk_image = image.resize(degraded_image_size)
-        val_degraded_image = val_shrunk_image.resize(orig_image_size)
-        val_degraded_image.show()
-        val_degraded_image.save(os.path.join(degraded_dir, val_image))
-        image.close()
-        val_shrunk_image.close()
-        val_degraded_image.close()
+    if ctxt.val_image_set is None:
+        val_images = [os.path.join(val_baseline_dir, x) for x in os.listdir(val_baseline_dir) if x.endswith(exts)]
+        ctxt.val_image_set = set()
+    else:
+        val_images = list(ctxt.val_image_set)
+    num_images = len(val_images)
+    for i, val_image in enumerate(val_images):
+        try:
+            # print(i, degraded_image_size, val_image)
+            image = Image.open(val_image)
+            val_shrunk_image = image.resize(degraded_image_size)
+            val_degraded_image = val_shrunk_image.resize(orig_image_size)
+            if i == 0:
+                val_degraded_image.show()
+            val_degraded_image.save(os.path.join(degraded_dir, val_image))
+            image.close()
+            val_shrunk_image.close()
+            val_degraded_image.close()
+        except OSError:
+            ctxt.val_image_set.discard(val_image)
+            corrupted_counter += 1
+            continue
+        ctxt.val_image_set.add(val_image)
+        
+    return num_images, corrupted_counter
 
 def run_eval_on_initial_resolutions(ctxt):
     """
@@ -135,6 +150,8 @@ def run_eval_on_degraded_images(ctxt):
 
     if ctxt.verbose:
         print(f"degrading images from {long_low_range} to {long_high_range} step {step}")
+    corrupted_counter = 0
+    max_images = 0
     for degraded_long_res in range(long_low_range, long_high_range, step):
         degraded_short_res = math.ceil(shorter_mult * degraded_long_res)
         degraded_width = degraded_long_res if width == longer else degraded_short_res
@@ -145,7 +162,10 @@ def run_eval_on_degraded_images(ctxt):
             maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
 
         # Degrade images and run evaluation
-        degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
+        num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, 
+                                                       corrupted_counter)
+        if max_images == 0:
+            max_images = num_images
         # TODO: SHUBHAM: I think you will implement your knee discovery algorithm here
         mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
 
@@ -164,6 +184,9 @@ def run_eval_on_degraded_images(ctxt):
     # results_df.to_csv(results_file, index=False)
 
     # return results
+
+    if corrupted_counter > 0:
+        print(f"{corrupted_counter} out of {max_images} images are corrupted!")
     
 
 def mark_as_knee(ctxt, name, orig_image_size, degraded_image_size):
@@ -281,7 +304,7 @@ def run_knee_discovery(ctxt):
     else:
         eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
         if os.path.exists(eval_results_filename):
-            results_df = pd.read_csv(eval_results_filename)
+            results_df = pd.read_csv(eval_results_filename, index_col=False)
         else: 
             print(f"Knee discovery: {eval_results_filename} not found!")
             return
