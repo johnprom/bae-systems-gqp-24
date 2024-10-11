@@ -19,5 +19,4 @@ dependencies:
       - timm  # Swin Transformer (in the timm library)
       - geojson
       - fpdf
-      - fpdf
       - kneed
