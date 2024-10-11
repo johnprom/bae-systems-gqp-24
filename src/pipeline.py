@@ -61,7 +61,7 @@ class Pipeline:
                 self.cache_results = True
                 
         self.class_names = None
-        self.val_image_set = None
+        self.val_image_filename_set = None
     
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()

@@ -79,29 +79,34 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     # baseline_dir = ctxt.val_baseline_dir
     os.makedirs(degraded_dir, exist_ok=True)
     
-    if ctxt.val_image_set is None:
-        val_images = [os.path.join(val_baseline_dir, x) for x in os.listdir(val_baseline_dir) if x.endswith(exts)]
-        ctxt.val_image_set = set()
+    if ctxt.val_image_filename_set is None:
+        val_image_filenames = [os.path.join(val_baseline_dir, x) for x in os.listdir(val_baseline_dir) if x.endswith(exts)]
+        ctxt.val_image_filename_set = set(val_image_filenames)
     else:
-        val_images = list(ctxt.val_image_set)
-    num_images = len(val_images)
-    for i, val_image in enumerate(val_images):
-        try:
-            # print(i, degraded_image_size, val_image)
-            image = Image.open(val_image)
-            val_shrunk_image = image.resize(degraded_image_size)
-            val_degraded_image = val_shrunk_image.resize(orig_image_size)
-            if i == 0:
-                val_degraded_image.show()
-            val_degraded_image.save(os.path.join(degraded_dir, val_image))
-            image.close()
-            val_shrunk_image.close()
-            val_degraded_image.close()
-        except OSError:
-            ctxt.val_image_set.discard(val_image)
-            corrupted_counter += 1
-            continue
-        ctxt.val_image_set.add(val_image)
+        val_image_filenames = list(ctxt.val_image_filename_set)
+    num_images = len(val_image_filenames)
+    for val_image_filename in val_image_filenames:
+        if os.path.exists(val_image_filename):
+            val_degraded_image_filename = os.path.join(degraded_dir, val_image_filename)
+            if not os.path.exists(val_degraded_image_filename):
+                if orig_image_size == degraded_image_size:
+                    # resolutions and hyperparameters are equal, simple copy
+                    shutil.copyfile(val_image_filename, val_degraded_image_filename)
+                try:
+                    # print(i, degraded_image_size, val_image)
+                    image = Image.open(val_image_filename)
+                    val_shrunk_image = image.resize(degraded_image_size)
+                    val_degraded_image = val_shrunk_image.resize(orig_image_size)
+                    val_degraded_image.save(val_degraded_image_filename)
+                    image.close()
+                    val_shrunk_image.close()
+                    val_degraded_image.close()
+                except OSError:
+                    ctxt.val_image_filename_set.discard(val_image_filename)
+                    corrupted_counter += 1
+                    continue
+        else:
+            ctxt.val_image_filename_set.discard(val_image_filename)
         
     return num_images, corrupted_counter
 
@@ -166,7 +171,8 @@ def run_eval_on_degraded_images(ctxt):
                                                        corrupted_counter)
         if max_images == 0:
             max_images = num_images
-        # TODO: SHUBHAM: I think you will implement your knee discovery algorithm here
+        # TODO: SHUBHAM: I think you will implement your knee discovery algorithm around here
+        # Note that we are optimizing for detection of ONE class, which means you would have to
         mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
 
     #     # Store results in list
@@ -188,9 +194,6 @@ def run_eval_on_degraded_images(ctxt):
     if corrupted_counter > 0:
         print(f"{corrupted_counter} out of {max_images} images are corrupted!")
     
-
-def mark_as_knee(ctxt, name, orig_image_size, degraded_image_size):
-    pass
 
 def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     # arguments are all pd.Series, as is return
@@ -233,15 +236,23 @@ def calculate_knee(class_name, results_class_df):
     degradation_factor_list = degradation_factor_series.to_list()
     print(f"type(degradation_factor_list) is {type(degradation_factor_list)}, length {len(degradation_factor_list)}")
     
-    mAP_values = results_class_df['mAP'].to_list()
+    mAP_values = mAP_values_series.to_list()
     print(f"type(mAP_values) is {type(mAP_values)}, length {len(mAP_values)}")
     # if math.isclose(a, b, abs_tol=1e-7):
 
     # iapc_values = [1/mAP for mAP in mAP_values]
 
     # Use KneeLocator to find the knee
+    print(f"degradation factor list {degradation_factor_list}")
+    print(f"mAP list {mAP_values}")
+    
+    # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
+    if all(mAP == 0.0 for mAP in mAP_values):
+        return None
+    
     kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='convex', direction='increasing')
     knee_degradation_factor = kneedle.knee
+    print(f"knee degradation factor {knee_degradation_factor}")
     
     return knee_degradation_factor
 
@@ -288,6 +299,7 @@ def run_knee_discovery(ctxt):
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
+    eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
     
     if 'clean_subdir' in config['knee_discovery'] and config['knee_discovery']['clean_subdir']:
         if os.path.exists(results_path):
@@ -302,7 +314,6 @@ def run_knee_discovery(ctxt):
     if ctxt.results_cache_df is not None:
         results_df = ctxt.results_cache_df
     else:
-        eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
         if os.path.exists(eval_results_filename):
             results_df = pd.read_csv(eval_results_filename, index_col=False)
         else: 
@@ -311,18 +322,25 @@ def run_knee_discovery(ctxt):
         # results = results_df.to_dict('records')
 
     # Calculate the knee for each class and plot the IAPC curve
-    class_names = list(config['target_labels'].values())
+#     class_names = list(config['target_labels'].values())
+    results_df['degradation_factor'] = results_df['degradation_factor'].astype(float)
+    class_names = results_df['object_name'].unique()
     for class_name in class_names:
         results_class_df = results_df[results_df['object_name'] == class_name]
         knee_degradation_factor = calculate_knee(class_name, results_class_df)
 
-        df = results_class_df[np.isclose(results_class_df['degradation_factor'], knee_degradation_factor, atol=1e-5)]
         results_class_df['knee'] = False
-        results_class_df.at[df.index, 'knee'] = True
+        if knee_degradation_factor is not None:
+            df = results_class_df[np.isclose(results_class_df['degradation_factor'], knee_degradation_factor, atol=1e-5)]
+            results_df.at[df.index, 'knee'] = True
 
-        print(f"Knee discovered at {knee_degradation_factor} for {class_name}")
+            print(f"Knee discovered at {knee_degradation_factor} for {class_name}")
 
         # Optionally, plot the IAPC curve for the class
         # plot_iapc_curve(results_class_df, class_name)  # class name pulled from class_filtering.py
 
+    results_df.to_csv(eval_results_filename, index=False)
+    if ctxt.cache_results:
+        ctxt.results_cache_df = results_df.copy()
+        
     print("End knee discovery")

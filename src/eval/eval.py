@@ -69,7 +69,7 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
         rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
                                    degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
         print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
-              + "mAP {mAP_list[idx]}, knee {is_knee}")
+              + f"mAP {mAP_list[idx]}, knee {is_knee}")
     
     
     rcdf.to_csv(eval_results_filename, index=False)
