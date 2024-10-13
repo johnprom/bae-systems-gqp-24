@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import pprint
 import shutil
+import time
 
 from knee_discovery.knee_discovery import run_knee_discovery
 from preprocessing.preprocessing import run_preprocessing
@@ -219,19 +220,29 @@ class Pipeline:
         
         pipeline_config = self.config
     
+        start_pp = time.time()
         if "run_preprocess" in pipeline_config and pipeline_config["run_preprocess"]:
             run_preprocessing(self)
     
+        start_tr = time.time()
+        print(f"preprocessing duration {start_tr - start_pp} seconds")
         if "run_train" in pipeline_config and pipeline_config["run_train"]:
             run_finetuning(self)
     
+        start_kd = time.time()
+        print(f"training duration {start_kd - start_tr} seconds")
         if "run_knee_discovery" in pipeline_config and pipeline_config["run_knee_discovery"]:
             run_knee_discovery(self)
     
+        start_gr = time.time()
+        print(f"knee discovery duration {start_gr - start_kd} seconds")
         if "generate_report" in pipeline_config and pipeline_config["generate_report"]:
             generate_report(self)
     
+        finish = time.time()
+        print(f"generate report duration {finish - start_gr} seconds")
         print("Pipeline Finished.")
+        print(f"Total pipeline duration {finish - start_pp} seconds")
 
 # Define the main function
 def main():

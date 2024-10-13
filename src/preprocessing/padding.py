@@ -79,7 +79,7 @@ def find_max_image_size(image_folder):
 # Padding function that incorporates annotations
 def padding_and_annotation_adjustment(ctxt):
     input_folder = ctxt.input_images_dir
-    labels_folder = ctxt.filtered_annotations_dir  # Folder for filtered annotations
+    labels_folder = ctxt.interim_images_dir  # Folder for filtered annotations
     output_folder = ctxt.interim_images_dir  # Folder for processed images and annotations
     os.makedirs(output_folder, exist_ok=True)
     

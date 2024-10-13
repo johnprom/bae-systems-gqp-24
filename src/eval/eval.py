@@ -145,6 +145,8 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     else:
         model_to_use = ctxt.final_weights_path
     model = YOLO(model_to_use)
+    if False:
+        model.to('cuda')
     
     # Run evaluation
     results = model.val(data=data_config_eval_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache())
