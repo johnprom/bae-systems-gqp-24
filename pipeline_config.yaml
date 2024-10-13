@@ -1,8 +1,8 @@
 # Execution flow parameters
-# run_preprocess: true # default false
+#run_preprocess: true # default false
 # run_train: true # default false
 run_knee_discovery: true # default false
-generate_report: true # default false
+# generate_report: true # default false
 #
 #
 # Global parameters
@@ -22,6 +22,7 @@ input_images_labels_filename: "xView_train.geojson" # REQUIRED inside input_imag
 input_class_labels_filename: "xview_class_labels.json" # REQUIRED inside input_images_subdir
 output_subdir: "output" # REQUIRED subdir from top_dir
 model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
+use_cuda: false # Instructs all modules to use CUDA, default false
 trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, subdir from top_dir
 #
 pixel_size: 0.3 # in meters
@@ -46,13 +47,13 @@ preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing meth
 preprocess:
   output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
   filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preoprocess:output_subdir
-  # clean_subdir: true # wipes out the preprocess output_subdir, default false
+  clean_subdir: true # wipes out the preprocess output_subdir, default false
   train_split: 0.8 # REQUIRED FOR PREPROCESSING
 train:
   clean_subdir: true # Code needs to be added for this
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
-  clean_subdir: false # wipes out the knee_discovery:output_subdir above, default false
+  clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
   cache_results: true # Results are cached in memory to improve performance, default false
   use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
   # ONLY used if knee_discovery is being run without preprocessing or training
@@ -61,7 +62,7 @@ knee_discovery:
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
   #
-  search_resolution_range: [0.85, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
   # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
   # if enabled_feeback is true, then this range is just the initial search

@@ -63,7 +63,12 @@ class Pipeline:
                 
         self.class_names = None
         self.val_image_filename_set = None
-    
+        
+        if 'use_cuda' in self.config and self.config['use_cuda']:
+            self.use_cuda = True
+        else:
+            self.use_cuda = False
+        
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
             

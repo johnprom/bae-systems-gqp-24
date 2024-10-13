@@ -27,9 +27,7 @@ def run_finetuning(ctxt):
     if ctxt.verbose:
         print("About to instantiate the model")
     base_model = YOLO(yolo_id)
-    if False:
-        if ctxt.verbose:
-            print("Adding cuda to the model")
+    if ctxt.use_cuda:
         base_model.to('cuda')
         if ctxt.verbose:
             print("Added cuda to the model")
