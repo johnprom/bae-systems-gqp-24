@@ -1,4 +1,4 @@
-name: baesystems_turing
+name: baesystems
 channels:
   - pytorch
   - nvidia
