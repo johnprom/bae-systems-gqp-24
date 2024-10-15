@@ -158,6 +158,10 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
     
+    # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
+    if len(mAP_list) == 0:
+        mAP_list = [0.0] * len(model.names)
+
     # log results to a structured file 
     update_results(ctxt, data_config['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list, "unknown")
     
