@@ -9,7 +9,6 @@ dependencies:
   - pytorch
   - torchvision
   - torchaudio
-  # - cudatoolkit=11.3
   - numpy
   - opencv
   - matplotlib
