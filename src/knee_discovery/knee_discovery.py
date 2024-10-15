@@ -53,7 +53,7 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     # config = ctxt.get_pipeline_config()
     # data_config_path = ctxt.get_data_config_dir_path()
 
-    print(f"degrade images {orig_image_size} -> {degraded_image_size} in degraded directory {degraded_dir}")
+    print(f"degrade images {orig_image_size} -> {degraded_image_size} in degraded directory {degraded_dir}", flush=True)
     config = ctxt.config
 
     method = config['preprocess_method']
@@ -85,26 +85,31 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     else:
         val_image_filenames = list(ctxt.val_image_filename_set)
     num_images = len(val_image_filenames)
+    print(f"val_image_filenames {val_image_filenames}")
+    print(f"num_images {num_images}", flush=True)
     for val_image_filename in val_image_filenames:
         if os.path.exists(val_image_filename):
-            val_degraded_image_filename = os.path.join(degraded_dir, val_image_filename)
+            val_degraded_image_filename = os.path.join(degraded_dir, os.path.basename(val_image_filename))
+            print(f"degraded name {val_degraded_image_filename}")
             if not os.path.exists(val_degraded_image_filename):
                 if orig_image_size == degraded_image_size:
                     # resolutions and hyperparameters are equal, simple copy
                     shutil.copyfile(val_image_filename, val_degraded_image_filename)
-                try:
-                    # print(i, degraded_image_size, val_image)
-                    image = Image.open(val_image_filename)
-                    val_shrunk_image = image.resize(degraded_image_size)
-                    val_degraded_image = val_shrunk_image.resize(orig_image_size)
-                    val_degraded_image.save(val_degraded_image_filename)
-                    image.close()
-                    val_shrunk_image.close()
-                    val_degraded_image.close()
-                except OSError:
-                    ctxt.val_image_filename_set.discard(val_image_filename)
-                    corrupted_counter += 1
-                    continue
+                else:
+                    try:
+                        print(degraded_image_size, val_image_filename, flush=True)
+                        image = Image.open(val_image_filename)
+                        val_shrunk_image = image.resize(degraded_image_size)
+                        val_degraded_image = val_shrunk_image.resize(orig_image_size)
+                        val_degraded_image.save(val_degraded_image_filename) 
+                        print(val_degraded_image_filename, flush=True)
+                        image.close()
+                        val_shrunk_image.close()
+                        val_degraded_image.close()
+                    except OSError:
+                        ctxt.val_image_filename_set.discard(val_image_filename)
+                        corrupted_counter += 1
+                        continue
         else:
             ctxt.val_image_filename_set.discard(val_image_filename)
         
@@ -229,30 +234,20 @@ def calculate_knee(class_name, results_class_df):
     orig_res_h = results_class_df['original_resolution_height'].astype(float)
     eff_res_w = results_class_df['effective_resolution_width'].astype(float)
     eff_res_h = results_class_df['effective_resolution_height'].astype(float)
-    degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
-    print(f"type(degradation_factor_series) is {type(degradation_factor_series)}, shape {degradation_factor_series.shape}")
     mAP_values_series = results_class_df['mAP']
-    print(f"type(mAP_values_series) is {type(mAP_values_series)}, shape {mAP_values_series.shape}")
     degradation_factor_list = degradation_factor_series.to_list()
-    print(f"type(degradation_factor_list) is {type(degradation_factor_list)}, length {len(degradation_factor_list)}")
     
     mAP_values = mAP_values_series.to_list()
-    print(f"type(mAP_values) is {type(mAP_values)}, length {len(mAP_values)}")
     # if math.isclose(a, b, abs_tol=1e-7):
 
     # iapc_values = [1/mAP for mAP in mAP_values]
 
-    # Use KneeLocator to find the knee
-    print(f"degradation factor list {degradation_factor_list}")
-    print(f"mAP list {mAP_values}")
-    
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
     if all(mAP == 0.0 for mAP in mAP_values):
         return None
     
     kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='convex', direction='increasing')
     knee_degradation_factor = kneedle.knee
-    print(f"knee degradation factor {knee_degradation_factor}")
     
     return knee_degradation_factor
 
