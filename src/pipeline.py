@@ -80,9 +80,6 @@ class Pipeline:
             return self.config['top_dir']
         return os.path.join(os.path.dirname(__file__), '..')
 
-    def get_data_config_eval_dir_path(self):
-        return os.path.join(self.get_top_dir(), self.config['data_config_eval_filename'])
-        
     def get_data_config_dir_path(self):
         return os.path.join(self.get_top_dir(), self.config['data_config_filename'])
         

@@ -1,8 +1,8 @@
 # Execution flow parameters
-#run_preprocess: true # default false
-# run_train: true # default false
+run_preprocess: true # default false
+run_train: true # default false
 run_knee_discovery: true # default false
-# generate_report: true # default false
+generate_report: true # default false
 #
 #
 # Global parameters
@@ -14,7 +14,6 @@ run_knee_discovery: true # default false
 #
 #data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
 data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
-data_config_eval_filename: "data_config_eval.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
 #
 input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from top_dir
 interim_images_subdir: "interim" # REQUIRED subdir from input_images_subdir

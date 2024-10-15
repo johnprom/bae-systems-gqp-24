@@ -10,7 +10,7 @@ import os
 import pandas as pd
 from ultralytics import YOLO
 
-from util.util import load_pipeline_config
+from util.util import load_pipeline_config, update_data_config_val_path
 # from knee_discovery.knee_discovery import calc_degradation_factor
 
 def get_model(config):
@@ -65,11 +65,11 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
         # degradation_factor = calc_degradation_factor(orig_image_size, orig_image_size, degraded_image_size, degraded_image_size)
         rcdf_list = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
                                    degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
-        print(f"rcdf list length {len(rcdf_list)}, iapc columns length {len(ctxt.iapc_columns)}, rcdf length {rcdf.shape[1]}")
         rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
                                    degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
-        print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
-              + f"mAP {mAP_list[idx]}, knee {is_knee}")
+        if ctxt.verbose:
+            print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
+                  + f"mAP {mAP_list[idx]}, knee {is_knee}")
     
     
     rcdf.to_csv(eval_results_filename, index=False)
@@ -137,8 +137,10 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     - mAP: Mean Average Precision of the model for this resolution.
     """
     
-    data_config_eval_path = ctxt.get_data_config_eval_dir_path()
-    data_config_eval = load_pipeline_config(data_config_eval_path)
+    update_data_config_val_path(ctxt, val_degraded_dir_path)
+    
+    data_config_path = ctxt.get_data_config_dir_path()
+    data_config = load_pipeline_config(data_config_path)
     
     if ctxt.final_weights_path is None or ctxt.final_weights_path == "" or not os.path.exists(ctxt.final_weights_path):
         model_to_use = ctxt.get_model_name()
@@ -151,15 +153,13 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
             print("Added cuda to the model")
     
     # Run evaluation
-    results = model.val(data=data_config_eval_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache())
+    results = model.val(data=data_config_path, imgsz=baseline_image_size[0], cache=ctxt.use_eval_cache())
     
     # Retrieve mAP from the evaluation results
-    print(f"type of maps return is {type(results.box.maps)}")
-    print(f"{results.box.maps}")
     mAP_list = list(results.box.maps)  # Access mAP for object detection
     
     # log results to a structured file 
-    update_results(ctxt, data_config_eval['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list, "unknown")
+    update_results(ctxt, data_config['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list, "unknown")
     
     return mAP_list  # return the mAP value for resolution
 

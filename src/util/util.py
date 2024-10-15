@@ -21,13 +21,6 @@ def update_yaml_file(ctxt, update_field, new_value):
     with open(data_config_path, 'w') as file:
         yaml.dump(data, file)
 
-    data_config_path = ctxt.get_data_config_eval_dir_path()
-    with open(data_config_path, 'r') as file:
-        data = yaml.safe_load(file)
-    data[update_field] = new_value
-    with open(data_config_path, 'w') as file:
-        yaml.dump(data, file)
-
 def update_data_config_train_path(ctxt, path):
     update_yaml_file(ctxt, 'train', path)
 
