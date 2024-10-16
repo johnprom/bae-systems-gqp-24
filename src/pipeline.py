@@ -5,6 +5,7 @@ import pandas as pd
 import pprint
 import shutil
 import time
+import torch
 
 from knee_discovery.knee_discovery import run_knee_discovery
 from preprocessing.preprocessing import run_preprocessing
@@ -64,7 +65,7 @@ class Pipeline:
         self.class_names = None
         self.val_image_filename_set = None
         
-        if 'use_cuda' in self.config and self.config['use_cuda']:
+        if 'use_cuda' in self.config and self.config['use_cuda'] and torch.cuda.is_available():
             self.use_cuda = True
         else:
             self.use_cuda = False
