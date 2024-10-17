@@ -58,9 +58,12 @@ class Pipeline:
         # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
         self.results_cache_df = None
         self.cache_results = False
+        self.knee_discovery_search_algorithm = None
         if 'run_knee_discovery' in self.config and self.config['run_knee_discovery']:
             if 'cache_results' in self.config['knee_discovery'] and self.config['knee_discovery']['cache_results']:
                 self.cache_results = True
+            if 'search_algorithm' in self.config['knee_discovery']:
+                self.knee_discovery_search_algorithm = self.config['knee_discovery']['search_algorithm']
                 
         self.class_names = None
         self.val_image_filename_set = None

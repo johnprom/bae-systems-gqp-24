@@ -71,6 +71,7 @@ knee_discovery:
   # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
   # example of range to be searched from above given a 640x640 original resolution
   # again, note that 640x640 would always be searched regardless
+  # search_algorithm: 'binary'
 #
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
