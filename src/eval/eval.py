@@ -153,7 +153,7 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
             print("Added cuda to the model")
     
     # Run evaluation
-    results = model.val(data=data_config_path, imgsz=baseline_image_size[0], cache=ctxt.use_eval_cache())
+    results = model.val(data=data_config_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache())
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
