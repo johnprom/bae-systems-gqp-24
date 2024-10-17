@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
 import shutil
 import sys
 
@@ -21,6 +22,15 @@ from PIL import Image
 from eval.eval import run_eval, update_results
 
 exts = ('.tif', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')  # Common image file extensions
+label_ext = '.txt'
+
+def replace_image_ext_with_label(filepath):
+    path = Path(filepath)
+
+    if path.suffix.lower() in exts:
+        return path.with_suffix(label_ext)
+
+    return filepath
 
 def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, corrupted_counter):
     """
@@ -63,12 +73,15 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     else:
         val_image_filenames = list(ctxt.val_image_filename_set)
     num_images = len(val_image_filenames)
+    val_label_filenames = [replace_image_ext_with_label(fn) for fn in val_image_filenames]
     print(f"val_image_filenames {val_image_filenames}")
     print(f"num_images {num_images}", flush=True)
-    for val_image_filename in val_image_filenames:
-        if os.path.exists(val_image_filename):
+    for idx, val_image_filename in enumerate(val_image_filenames):
+        val_label_filename = val_label_filenames[idx]
+        if os.path.exists(val_image_filename) and os.path.exists(val_label_filename):
             val_degraded_image_filename = os.path.join(degraded_dir, os.path.basename(val_image_filename))
-            print(f"degraded name {val_degraded_image_filename}")
+            val_degraded_label_filename = os.path.join(degraded_dir, os.path.basename(val_label_filename))
+            print(f"degraded image name {val_degraded_image_filename}")
             if not os.path.exists(val_degraded_image_filename):
                 if orig_image_size == degraded_image_size:
                     # resolutions and hyperparameters are equal, simple copy
@@ -88,6 +101,8 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
                         ctxt.val_image_filename_set.discard(val_image_filename)
                         corrupted_counter += 1
                         continue
+                if not os.path.exists(val_degraded_label_filename):
+                    shutil.copyfile(val_label_filename, val_degraded_label_filename)
         else:
             ctxt.val_image_filename_set.discard(val_image_filename)
         
@@ -196,7 +211,11 @@ def calculate_knee(class_name, results_class_df):
     if all(mAP == 0.0 for mAP in mAP_values):
         return None
     
-    kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='convex', direction='increasing')
+    print(class_name)
+    print(degradation_factor_list)
+    print(mAP_values)
+
+    kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='concave', direction='increasing')
     knee_degradation_factor = kneedle.knee
     
     return knee_degradation_factor
@@ -279,146 +298,160 @@ def run_knee_discovery(ctxt):
     mAP_tolerance = 1e-3      # Tolerance for mAP change convergence
     max_iterations = 10       # Maximum number of iterations to prevent excessive computations
 
+    results_df['knee'] = False
     for class_name in class_names:
-        results_class_df = results_df[results_df['object_name'] == class_name]
+        results_class_df = results_df[results_df['object_name'] == class_name].copy()
         knee_degradation_factor = calculate_knee(class_name, results_class_df)
+        print(f"knee_degradation_factor {knee_degradation_factor}")
         
-        # Initialize variables for convergence checking
-        new_knee_degradation_factor = knee_degradation_factor
-        old_knee_degradation_factor = None
-        new_knee_mAP = None
-        old_knee_mAP = None
-        iteration = 0
+        # # Initialize variables for convergence checking
+        # new_knee_degradation_factor = knee_degradation_factor
+        # old_knee_degradation_factor = None
+        # new_knee_mAP = None
+        # old_knee_mAP = None
+        # iteration = 0
 
-        while (iteration < max_iterations and new_knee_degradation_factor is not None and
-               (old_knee_degradation_factor is None or not np.isclose(new_knee_degradation_factor, old_knee_degradation_factor, atol=desired_tolerance))):
-            iteration += 1
-            old_knee_degradation_factor = new_knee_degradation_factor
+        # while (iteration < max_iterations and new_knee_degradation_factor is not None and
+        #        (old_knee_degradation_factor is None or not np.isclose(new_knee_degradation_factor, old_knee_degradation_factor, atol=desired_tolerance))):
+        #     iteration += 1
+        #     old_knee_degradation_factor = new_knee_degradation_factor
 
-            # Implement the knee discovery algorithm here
-            # Find neighboring degradation factors
-            degradation_factors = results_class_df['degradation_factor'].values
-            mAP_values = results_class_df['mAP'].values
+        #     # Implement the knee discovery algorithm here
+        #     # Find neighboring degradation factors
+        #     degradation_factors = results_class_df['degradation_factor'].values
+        #     mAP_values = results_class_df['mAP'].values
 
-            sorted_indices = np.argsort(degradation_factors)
-            degradation_factors_sorted = degradation_factors[sorted_indices]
-            mAP_values_sorted = mAP_values[sorted_indices]
+        #     sorted_indices = np.argsort(degradation_factors)
+        #     degradation_factors_sorted = degradation_factors[sorted_indices]
+        #     mAP_values_sorted = mAP_values[sorted_indices]
 
-            # Find index of current knee degradation factor
-            knee_index = np.where(np.isclose(degradation_factors_sorted, new_knee_degradation_factor, atol=1e-5))[0]
+        #     # Find index of current knee degradation factor
+        #     knee_index = np.where(np.isclose(degradation_factors_sorted, new_knee_degradation_factor, atol=1e-5))[0]
 
-            if knee_index.size == 0:
-                print(f"Knee degradation factor {new_knee_degradation_factor} not found in degradation factors.")
-                break
+        #     if knee_index.size == 0:
+        #         print(f"Knee degradation factor {new_knee_degradation_factor} not found in degradation factors.")
+        #         break
 
-            knee_index = knee_index[0]
+        #     knee_index = knee_index[0]
 
-            # Get mAP at the knee degradation factor
-            new_knee_mAP = mAP_values_sorted[knee_index]
+        #     # Get mAP at the knee degradation factor
+        #     new_knee_mAP = mAP_values_sorted[knee_index]
 
-            # If old_knee_mAP is set, check mAP change for convergence
-            if old_knee_mAP is not None:
-                mAP_change = abs(new_knee_mAP - old_knee_mAP)
-                if mAP_change < mAP_tolerance:
-                    print(f"Convergence achieved based on mAP change for class {class_name}.")
-                    break
+        #     # If old_knee_mAP is set, check mAP change for convergence
+        #     if old_knee_mAP is not None:
+        #         mAP_change = abs(new_knee_mAP - old_knee_mAP)
+        #         if mAP_change < mAP_tolerance:
+        #             print(f"Convergence achieved based on mAP change for class {class_name}.")
+        #             break
 
-            old_knee_mAP = new_knee_mAP
+        #     old_knee_mAP = new_knee_mAP
 
-            # Find left and right indices
-            if knee_index > 0:
-                left_index = knee_index - 1
-                left_degradation = degradation_factors_sorted[left_index]
-                left_mAP = mAP_values_sorted[left_index]
-                delta_mAP_left = abs(new_knee_mAP - left_mAP)
-            else:
-                left_degradation = None
-                delta_mAP_left = 0
+        #     # Find left and right indices
+        #     if knee_index > 0:
+        #         left_index = knee_index - 1
+        #         left_degradation = degradation_factors_sorted[left_index]
+        #         left_mAP = mAP_values_sorted[left_index]
+        #         delta_mAP_left = abs(new_knee_mAP - left_mAP)
+        #     else:
+        #         left_degradation = None
+        #         delta_mAP_left = 0
 
-            if knee_index < len(degradation_factors_sorted) - 1:
-                right_index = knee_index + 1
-                right_degradation = degradation_factors_sorted[right_index]
-                right_mAP = mAP_values_sorted[right_index]
-                delta_mAP_right = abs(new_knee_mAP - right_mAP)
-            else:
-                right_degradation = None
-                delta_mAP_right = 0
+        #     if knee_index < len(degradation_factors_sorted) - 1:
+        #         right_index = knee_index + 1
+        #         right_degradation = degradation_factors_sorted[right_index]
+        #         right_mAP = mAP_values_sorted[right_index]
+        #         delta_mAP_right = abs(new_knee_mAP - right_mAP)
+        #     else:
+        #         right_degradation = None
+        #         delta_mAP_right = 0
 
-            # Decide which side has higher mAP difference
-            if delta_mAP_left > delta_mAP_right and left_degradation is not None:
-                # Choose left side
-                degradation1 = left_degradation
-                degradation2 = new_knee_degradation_factor
-            elif right_degradation is not None:
-                # Choose right side
-                degradation1 = new_knee_degradation_factor
-                degradation2 = right_degradation
-            else:
-                # Cannot refine further
-                print("No further refinement possible.")
-                break
+        #     # Decide which side has higher mAP difference
+        #     if delta_mAP_left > delta_mAP_right and left_degradation is not None:
+        #         # Choose left side
+        #         degradation1 = left_degradation
+        #         degradation2 = new_knee_degradation_factor
+        #     elif right_degradation is not None:
+        #         # Choose right side
+        #         degradation1 = new_knee_degradation_factor
+        #         degradation2 = right_degradation
+        #     else:
+        #         # Cannot refine further
+        #         print("No further refinement possible.")
+        #         break
 
-            # Calculate new degradation factor between selected points
-            new_degradation = (degradation1 + degradation2) / 2
+        #     # Calculate new degradation factor between selected points
+        #     new_degradation = (degradation1 + degradation2) / 2
 
-            # Check if this degradation factor is already in our data
-            if np.any(np.isclose(degradation_factors, new_degradation, atol=1e-4)):
-                # This degradation factor is already in the data, cannot proceed
-                print(f"Degradation factor {new_degradation} already evaluated.")
-                break
+        #     # Check if this degradation factor is already in our data
+        #     if np.any(np.isclose(degradation_factors, new_degradation, atol=1e-4)):
+        #         # This degradation factor is already in the data, cannot proceed
+        #         print(f"Degradation factor {new_degradation} already evaluated.")
+        #         break
 
-            # Convert degradation factor to degraded width and height
-            width = results_class_df['original_resolution_width'].iloc[0]
-            height = results_class_df['original_resolution_height'].iloc[0]
-            degraded_width = int(new_degradation * width)
-            degraded_height = int(new_degradation * height)
+        #     # Convert degradation factor to degraded width and height
+        #     width = results_class_df['original_resolution_width'].iloc[0]
+        #     height = results_class_df['original_resolution_height'].iloc[0]
+        #     degraded_width = int(new_degradation * width)
+        #     degraded_height = int(new_degradation * height)
 
-            # Ensure degraded dimensions are within valid ranges
-            degraded_width = max(1, min(int(width), degraded_width))
-            degraded_height = max(1, min(int(height), degraded_height))
+        #     # Ensure degraded dimensions are within valid ranges
+        #     degraded_width = max(1, min(int(width), degraded_width))
+        #     degraded_height = max(1, min(int(height), degraded_height))
 
-            # Degrade images at this new resolution and run evaluation
-            preprocess_method = config['preprocess_method']
-            pp_params = config['preprocess_methods'][preprocess_method]
-            val_template = pp_params['val_degraded_subdir']
-            stride = pp_params.get('stride', None)
-            val_degraded_dir = os.path.join(ctxt.get_preprocessing_dir_path(), val_template.format(
-                maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
+        #     # Degrade images at this new resolution and run evaluation
+        #     preprocess_method = config['preprocess_method']
+        #     pp_params = config['preprocess_methods'][preprocess_method]
+        #     val_template = pp_params['val_degraded_subdir']
+        #     stride = pp_params.get('stride', None)
+        #     val_degraded_dir = os.path.join(ctxt.get_preprocessing_dir_path(), val_template.format(
+        #         maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
 
-            num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, 0)
-            mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
-            # Note: No need to call update_results() here since run_eval() already calls it.
+        #     num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, 0)
+        #     mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
+        #     # Note: No need to call update_results() here since run_eval() already calls it.
 
-            # After updating results, refresh results_df
-            if ctxt.results_cache_df is not None:
-                results_df = ctxt.results_cache_df
-            else:
-                if os.path.exists(eval_results_filename):
-                    results_df = pd.read_csv(eval_results_filename, index_col=False)
-                else:
-                    print(f"Knee discovery: {eval_results_filename} not found!")
-                    break
+        #     # After updating results, refresh results_df
+        #     if ctxt.results_cache_df is not None:
+        #         results_df = ctxt.results_cache_df
+        #     else:
+        #         if os.path.exists(eval_results_filename):
+        #             results_df = pd.read_csv(eval_results_filename, index_col=False)
+        #         else:
+        #             print(f"Knee discovery: {eval_results_filename} not found!")
+        #             break
 
-            results_class_df = results_df[results_df['object_name'] == class_name]
+        #     results_class_df = results_df[results_df['object_name'] == class_name]
 
-            # Recalculate the knee
-            new_knee_degradation_factor = calculate_knee(class_name, results_class_df)
+        #     # Recalculate the knee
+        #     new_knee_degradation_factor = calculate_knee(class_name, results_class_df)
 
         # Mark the knee point
-        results_df.loc[results_df['object_name'] == class_name, 'knee'] = False
-        if new_knee_degradation_factor is not None:
-            df = results_class_df[np.isclose(results_class_df['degradation_factor'], new_knee_degradation_factor, atol=1e-5)]
+        # results_df.loc[results_df['object_name'] == class_name, 'knee'] = False
+        # if new_knee_degradation_factor is not None:
+        #     df = results_class_df[np.isclose(results_class_df['degradation_factor'], new_knee_degradation_factor, atol=1e-5)]
+        #     results_df.loc[df.index, 'knee'] = True
+
+        #     print(f"Knee discovered at degradation factor {new_knee_degradation_factor} for {class_name}")
+
+        #     # Plot the IAPC curve for the class
+        #    # plot_iapc_curve(results_class_df, class_name)
+        # else:
+        #     print(f"No knee found for class {class_name}")
+
+        # Mark the knee point
+        if knee_degradation_factor is not None:
+            df = results_class_df[np.isclose(results_class_df['degradation_factor'], knee_degradation_factor, atol=1e-5)]
             results_df.loc[df.index, 'knee'] = True
 
-            print(f"Knee discovered at degradation factor {new_knee_degradation_factor} for {class_name}")
+            print(f"Knee discovered at degradation factor {knee_degradation_factor} for {class_name}")
 
             # Plot the IAPC curve for the class
-           # plot_iapc_curve(results_class_df, class_name)
+            # plot_iapc_curve(results_class_df, class_name)
         else:
             print(f"No knee found for class {class_name}")
 
     results_df.to_csv(eval_results_filename, index=False)
     if ctxt.cache_results:
         ctxt.results_cache_df = results_df.copy()
-        
+
     print("End knee discovery")
