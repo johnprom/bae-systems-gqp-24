@@ -21,7 +21,7 @@ input_images_labels_filename: "xView_train.geojson" # REQUIRED inside input_imag
 input_class_labels_filename: "xview_class_labels.json" # REQUIRED inside input_images_subdir
 output_subdir: "output" # REQUIRED subdir from top_dir
 model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
-use_cuda: false # Instructs all modules to use CUDA, default false
+use_cuda: true # Instructs all modules to use CUDA, default false
 trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, subdir from top_dir
 #
 pixel_size: 0.3 # in meters
@@ -125,6 +125,6 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
       imgsz: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
       # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
       # That is, preprocess_methods:<method>:image_size
-      epochs: 1 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+      epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6]
