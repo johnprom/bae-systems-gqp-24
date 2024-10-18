@@ -179,13 +179,17 @@ class Pipeline:
         # ft_model = base_model.train(data=data_config_path, epochs=num_epochs, imgsz=input_width, batch=16, freeze=list(range(7)))
         # ft_model = base_model.train(**model_params)
     
+        if 'freeze' in model_params and len(model_params['freeze']) > 0:
+            freeze_str = '_'.join(map(str, model_params['freeze']))
+        else:
+            freeze_str = 'No_Freeze'
         self.final_weights_path = os.path.join(
             self.get_top_dir(), self.config['trained_models_subdir'], 
             trained_model_filename_template.format(width=model_params['imgsz'], 
                                                    height=model_params['imgsz'],
                                                    epochs=model_params['epochs'],
                                                    batch=model_params['batch'],
-                                                   freeze='_'.join(map(str, model_params['freeze']))))
+                                                   freeze=freeze_str))
         
     def is_model_yolo(self):
         yolo_id = self.get_model_name()
