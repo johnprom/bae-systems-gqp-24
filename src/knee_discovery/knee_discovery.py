@@ -20,7 +20,7 @@ from kneed import KneeLocator
 from PIL import Image
 
 # from util.util import get_preprocessed_images_dir_path, calc_degradation_factor
-from eval.eval import run_eval, update_results
+from eval.eval import run_eval, update_results, update_knee_results
 
 exts = ('.tif', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')  # Common image file extensions
 label_ext = '.txt'
@@ -121,7 +121,7 @@ def run_eval_on_initial_resolutions(ctxt):
    
     # Run evaluation on the baseline resolution
     baseline_dir = ctxt.val_baseline_dir
-    mAP = run_eval(ctxt, (width, height), (width, height), baseline_dir)
+    mAP = run_eval(ctxt, (width, height), (width, height), baseline_dir, "unknown")
     # update_results(ctxt, (width, height), (width, height), mAP)
     # Note: No need to call update_results() here since run_eval() already calls it.
 
@@ -172,7 +172,7 @@ def run_eval_on_degraded_images(ctxt):
             max_images = num_images
         # TODO: SHUBHAM: I think you will implement your knee discovery algorithm around here
         # Note that we are optimizing for detection of ONE class, which means you would have to
-        mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
+        mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, "unknown")
 
     if corrupted_counter > 0:
         print(f"{corrupted_counter} out of {max_images} images are corrupted!")
@@ -186,7 +186,7 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     degradation_factor = degradation_factor_area.apply(math.sqrt)
     return degradation_factor # pd.Series
 
-def calculate_knee(class_name, results_class_df):
+def calculate_knee(ctxt, class_name, results_class_df):
     """
     Calculate the knee in the IAPC curve using mAP values.
     Args:
@@ -204,58 +204,92 @@ def calculate_knee(class_name, results_class_df):
     degradation_factor_list = degradation_factor_series.to_list()
     
     mAP_values = mAP_values_series.to_list()
+    width_list = orig_res_w.to_list()
+    height_list = orig_res_h.to_list()
     # if math.isclose(a, b, abs_tol=1e-7):
 
     # iapc_values = [1/mAP for mAP in mAP_values]
 
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
     if all(mAP == 0.0 for mAP in mAP_values):
-        return None
+        return [], []
     
     print(class_name)
     print(degradation_factor_list)
     print(mAP_values)
-
+    
+    x = [d for i, d in enumerate(degradation_factor_list) if mAP_values[i] > 0.01]
+    y = [m for m in mAP_values if m > 0.01]
+    w = [w for i, w in enumerate(width_list) if mAP_values[i] > 0.01]
+    h = [h for i, h in enumerate(height_list) if mAP_values[i] > 0.01]
+    
     # interp_fn = interp1d(degradation_factor_list, mAP_values, kind='linear')
     # x_interp = np.linspace(0, 1, num=100)
     # y_interp = interp_fn(x_interp)
 
     # kneedle = KneeLocator(x_interp, y_interp, curve='concave', direction='increasing')
 
-    kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='concave', direction='increasing')
-    knee_degradation_factor = kneedle.knee
+    # kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='concave', direction='increasing')
+    kneedle = KneeLocator(x, y, curve='concave', direction='increasing')
+    x_out_list = list(sorted(kneedle.all_knees))
+    y_out_list = kneedle.all_knees_y
+    if ctxt.verbose:
+        print("Knees:")
+        print(f"  {x_out_list}")
+        print(f"  {y_out_list}")
     
-    return knee_degradation_factor
+    # def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
+    for i, x in enumerate(x_out_list):
+        update_knee_results(ctxt, class_name, (w[0], h[0]), x, y_out_list[i])
+        
+    return x_out_list, y_out_list
+    
+    # config = ctxt.get_pipeline_config()
+    # preprocess_method = config['preprocess_method']
+    # pp_params = config['preprocess_methods'][preprocess_method]
+    # val_template = pp_params['val_degraded_subdir']
+    # stride = pp_params.get('stride', None)
+
+    # for x in x_out_list:
+    #     dw = math.ceil(w*x)
+    #     dh = math.ceil(h*x)
+    #     val_degraded_dir = os.path.join(ctxt.get_preprocessing_dir_path(), val_template.format(
+    #         maxwidth=w, maxheight=h, effective_width=dw, effective_height=dh, stride=stride))
+
+    #     mAP_list = run_eval(ctxt, (w, h), (dw, dh), val_degraded_dir, True)
+
+    
+    # return x_out_list, y_out_list
 
 
-def plot_iapc_curve(results_class_df, class_name):
-    """
-    Plot the IAPC curve for the given results and highlight the knee point.
-    """
-    orig_res_w = results_class_df['original_resolution_width'].astype(float)
-    orig_res_h = results_class_df['original_resolution_height'].astype(float)
-    eff_res_w = results_class_df['effective_resolution_width'].astype(float)
-    eff_res_h = results_class_df['effective_resolution_height'].astype(float)
-    degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
+# def plot_iapc_curve(results_class_df, class_name):
+#     """
+#     Plot the IAPC curve for the given results and highlight the knee point.
+#     """
+#     orig_res_w = results_class_df['original_resolution_width'].astype(float)
+#     orig_res_h = results_class_df['original_resolution_height'].astype(float)
+#     eff_res_w = results_class_df['effective_resolution_width'].astype(float)
+#     eff_res_h = results_class_df['effective_resolution_height'].astype(float)
+#     degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
 
-    mAP_values = results_class_df['mAP'].values
-    degradation_factors = degradation_factor_series.values
+#     mAP_values = results_class_df['mAP'].values
+#     degradation_factors = degradation_factor_series.values
 
-    # Find the knee
-    kneedle = KneeLocator(degradation_factors, mAP_values, curve='concave', direction='decreasing')
-    knee_degradation_factor = kneedle.knee
+#     # Find the knee
+#     kneedle = KneeLocator(degradation_factors, mAP_values, curve='concave', direction='decreasing')
+#     knee_degradation_factor = kneedle.knee
 
-    # Plotting the IAPC curve
-    plt.figure(figsize=(10, 6))
-    plt.plot(degradation_factors, mAP_values, marker='o', label=f'{class_name} IAPC')
-    if knee_degradation_factor:
-        plt.axvline(x=knee_degradation_factor, color='r', linestyle='--', label=f'Knee at {knee_degradation_factor}')
-    plt.xlabel('Degradation Factor')
-    plt.ylabel('Mean Average Precision (mAP)')
-    plt.title(f'IAPC Curve for {class_name}')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+#     # Plotting the IAPC curve
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(degradation_factors, mAP_values, marker='o', label=f'{class_name} IAPC')
+#     if knee_degradation_factor:
+#         plt.axvline(x=knee_degradation_factor, color='r', linestyle='--', label=f'Knee at {knee_degradation_factor}')
+#     plt.xlabel('Degradation Factor')
+#     plt.ylabel('Mean Average Precision (mAP)')
+#     plt.title(f'IAPC Curve for {class_name}')
+#     plt.legend()
+#     plt.grid(True)
+#     plt.show()
     
 
 def run_knee_discovery(ctxt):
@@ -308,7 +342,11 @@ def run_knee_discovery(ctxt):
     results_df['knee'] = False
     for class_name in class_names:
         results_class_df = results_df[results_df['object_name'] == class_name].copy()
-        knee_degradation_factor = calculate_knee(class_name, results_class_df)
+        x_list, y_list = calculate_knee(ctxt, class_name, results_class_df)
+        if len(x_list) > 0 and len(y_list) > 0:
+            knee_degradation_factor = x_list[0]
+        else:
+            knee_degradation_factor = None
         print(f"knee_degradation_factor {knee_degradation_factor}")
         
         # Initialize variables for convergence checking
@@ -320,7 +358,9 @@ def run_knee_discovery(ctxt):
             iteration = 0
 
             while (iteration < max_iterations and new_knee_degradation_factor is not None and
-                    (old_knee_degradation_factor is None or not np.isclose(new_knee_degradation_factor, old_knee_degradation_factor, atol=desired_tolerance))):
+                    (old_knee_degradation_factor is None or not np.isclose(new_knee_degradation_factor, 
+                                                                           old_knee_degradation_factor, 
+                                                                           atol=desired_tolerance))):
                 iteration += 1
                 old_knee_degradation_factor = new_knee_degradation_factor
 
@@ -415,7 +455,7 @@ def run_knee_discovery(ctxt):
                     maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
 
                 num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, 0)
-                mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
+                mAP_list = run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, "unknown")
                 # Note: No need to call update_results() here since run_eval() already calls it.
 
                 # After updating results, refresh results_df
@@ -431,7 +471,12 @@ def run_knee_discovery(ctxt):
                 results_class_df = results_df[results_df['object_name'] == class_name]
 
                 # Recalculate the knee
-                new_knee_degradation_factor = calculate_knee(class_name, results_class_df)
+                x_list, y_list = calculate_knee(ctxt, class_name, results_class_df)
+                if len(x_list) > 0 and len(y_list) > 0:
+                    new_knee_degradation_factor = x_list[0]
+                else:
+                    new_knee_degradation_factor = None
+                    
 
             # Mark the knee point
             results_df.loc[results_df['object_name'] == class_name, 'knee'] = False
