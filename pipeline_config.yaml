@@ -128,4 +128,4 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
       # That is, preprocess_methods:<method>:image_size
       epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
-      freeze: [0, 1, 2, 3, 4, 5, 6]
+      freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
