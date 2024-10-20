@@ -211,7 +211,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
     # iapc_values = [1/mAP for mAP in mAP_values]
 
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
-    if all(mAP == 0.0 for mAP in mAP_values):
+    if all(mAP <= 0.01 for mAP in mAP_values):
         return [], []
     
     print(class_name)
@@ -226,6 +226,9 @@ def calculate_knee(ctxt, class_name, results_class_df):
     # interp_fn = interp1d(degradation_factor_list, mAP_values, kind='linear')
     # x_interp = np.linspace(0, 1, num=100)
     # y_interp = interp_fn(x_interp)
+    
+    if len(x) == 0 or len(y) == 0:
+        return [], []
 
     # kneedle = KneeLocator(x_interp, y_interp, curve='concave', direction='increasing')
 
