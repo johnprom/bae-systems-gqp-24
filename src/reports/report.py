@@ -41,7 +41,7 @@ def generate_report(ctxt):
                                                               data_IAPC['effective_resolution_width'],
                                                               data_IAPC['effective_resolution_height'])
     
-    num_curves_per_graph = 2
+    num_curves_per_graph = 5
     curve_color = ['blue', 'green', 'orange', 'teal', 'purple']
     assert len(curve_color) >= num_curves_per_graph
     
