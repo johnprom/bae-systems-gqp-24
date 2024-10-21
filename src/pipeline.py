@@ -17,7 +17,8 @@ from reports.report import generate_report
 
 class Pipeline:
     def __init__(self, args):
-        self.config = load_pipeline_config(args.config_filename)
+        self.config_filename = args.config_filename
+        self.config = load_pipeline_config(self.config_filename)
         self.verbose = args.verbose
   
         self.input_images_dir = self.get_input_images_dir_path()
@@ -52,6 +53,10 @@ class Pipeline:
                 }
         self.train_labels = list(range(len(self.target_labels)))
         self.train_names = self.xview_names.copy()
+        if 'target_names' in self.config['report']:
+            self.report_names = self.config['report']['target_names']
+        else:
+            self.report_names = self.xview_names.copy()
 
         self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
                              'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
