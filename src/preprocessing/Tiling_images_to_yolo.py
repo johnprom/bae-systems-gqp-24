@@ -141,7 +141,12 @@ class XViewTiler:
                     y_start = max(y_start := y * (self.tile_size - self.overlap), 0)
                     x_end = min(x_start + self.tile_size, img_w)
                     y_end = min(y_start + self.tile_size, img_h)
-
+                    ################
+                    tile_width = x_end - x_start  # New line to calculate tile width
+                    tile_height = y_end - y_start
+                    if tile_width != self.tile_size and tile_height != self.tile_size:
+                        continue  # Skip this tile if neither dimension matches targetTileSize (640)
+                    #################
                     tile = img.crop((x_start, y_start, x_end, y_end))
 
                     tile_bboxes = []
