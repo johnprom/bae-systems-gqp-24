@@ -104,7 +104,6 @@ class XViewTiler:
         data_dict = {}
         for filename in os.listdir(file_path):
             if filename.endswith('.tif'):
-                image_path = os.path.join(file_path, filename)
                 bounding_boxes = []
                 for new_class_id, class_id in enumerate(class_id_list):
                     for feature in features:
@@ -112,7 +111,6 @@ class XViewTiler:
                             bounds_str = feature['properties']['bounds_imcoords']
                             coordinates = list(map(int, bounds_str.split(',')))
                             bounding_boxes.append({
-                                # 'class_id': feature['properties'].get('type_id'),
                                 'class_id': train_id_list[new_class_id],
                                 'coordinates': coordinates
                             })
@@ -173,24 +171,3 @@ class XViewTiler:
                         label_filename = f"{img_id.split('.')[0]}_{x}_{y}.txt"
                         self.save_yolo_labels(tile_bboxes, tile_classes, os.path.join(output_lbl_dir, label_filename))
 
-        print("Tiling and label generation complete!")
-
-# To execute
-# if __name__ == "__main__":
-#     tiler = XViewTiler(tile_size=640, overlap=100)
-
-#     # Load geojson
-#     with open('xView_train.geojson', 'r') as f:
-#         gj = json.load(f)
-#     features = gj['features']
-
-#     # Get data for a specific class
-#     file_path = 'train_images'
-#     output_img_dir = 'output_images'
-#     output_lbl_dir = 'output_labels'
-#     class_id = 21  # Utility Truck
-
-#     result_dict = tiler.get_class_wise_data(features, file_path, class_id)
-
-#     # Tile and save
-#     tiler.tile_image_and_save(result_dict, file_path, output_img_dir, output_lbl_dir)

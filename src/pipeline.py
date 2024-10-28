@@ -198,7 +198,6 @@ class Pipeline:
         
     def is_model_yolo(self):
         yolo_id = self.get_model_name()
-        print(yolo_id, type(yolo_id), flush=True)
         if type(yolo_id) == str and yolo_id.startswith('yolo'):
             return True
         return False

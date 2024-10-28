@@ -6,7 +6,8 @@ from preprocessing.Tiling_images_to_yolo import XViewTiler
 
 # image tiling scheme
 def tiling(ctxt):
-    print("Begin tiling approach")
+    if ctxt.verbose:
+        print("Begin tiling approach")
     
     config = ctxt.get_pipeline_config() # dictionary of yaml configuration, in case you need it
     
@@ -23,4 +24,5 @@ def tiling(ctxt):
     
     tiler.tile_image_and_save(result_dict, ctxt.input_images_dir, ctxt.interim_images_dir, ctxt.interim_images_dir)
 
-    print("Finished running tiling approach.")
+    if ctxt.verbose:
+        print("Finished running tiling approach.")

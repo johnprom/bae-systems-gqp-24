@@ -1,9 +1,7 @@
 import geojson
 import json
 import os
-import shutil
 import yaml
-from enum import Enum
 
 def load_pipeline_config(config_path):
     # top_path = os.path.join(os.path.dirname(__file__), '..')

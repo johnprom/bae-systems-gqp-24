@@ -21,7 +21,6 @@ def run_finetuning(ctxt):
 
     yolo_id = ctxt.get_yolo_id()
     model_name = config['model']
-    print(f"Fine-tuning using model {model_name}")
     model_dict = config['models'][model_name]
     model_params = copy.deepcopy(model_dict['params'])
     if ctxt.verbose:

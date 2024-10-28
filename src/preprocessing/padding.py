@@ -118,5 +118,6 @@ def padding_and_annotation_adjustment(ctxt):
                 if ctxt.verbose:
                     print(f"Adjusted annotations and saved for {img_file}.")
     
-    print("Finished padding and annotation adjustment.")
+    if ctxt.verbose:
+        print("Finished padding and annotation adjustment.")
     return target_size, target_size  # Return final padded image dimensions (width, height)
