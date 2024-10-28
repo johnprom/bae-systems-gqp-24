@@ -124,6 +124,9 @@ class XViewTiler:
         """
         Function to tile images from a data_dict, adjust bounding boxes for each tile, and save the tiles and labels.
         """
+        img_class_summary = {}  # Initialize dictionary for class frequency summary
+
+
         for img_id, annotations in data_dict.items():
             img_path = os.path.join(file_path, img_id)
             if not os.path.exists(img_path):
@@ -134,6 +137,8 @@ class XViewTiler:
             img_w, img_h = img.size
             x_steps = math.ceil((img_w - self.overlap) / (self.tile_size - self.overlap))
             y_steps = math.ceil((img_h - self.overlap) / (self.tile_size - self.overlap))
+
+            img_class_summary[img_id] = {}  # Initialize a dictionary for this image's class counts
 
             for x in range(x_steps):
                 for y in range(y_steps):
@@ -172,6 +177,15 @@ class XViewTiler:
 
                         label_filename = f"{img_id.split('.')[0]}_{x}_{y}.txt"
                         self.save_yolo_labels(tile_bboxes, tile_classes, os.path.join(output_lbl_dir, label_filename))
+
+                        # Update the class count summary for this tile
+                        for cls_id in tile_classes:
+                            img_class_summary[img_id][cls_id] = img_class_summary[img_id].get(cls_id, 0) + 1
+
+        # Save the summary file in the specified path
+        summary_file_path = os.path.join("interim_class_dist", "class_summary.json")
+        with open(summary_file_path, 'w') as summary_file:
+            json.dump(img_class_summary, summary_file, indent=4)
 
         print("Tiling and label generation complete!")
 
