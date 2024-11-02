@@ -89,33 +89,45 @@ class Pipeline:
             return self.config['top_dir']
         return os.path.join(os.path.dirname(__file__), '..')
 
+    def get_input_dir(self):
+        if 'input_dir' in self.config:
+            return self.config['input_dir']
+        return self.get_top_dir()
+
     def get_data_config_dir_path(self):
         return os.path.join(self.get_top_dir(), self.config['data_config_filename'])
         
     def get_output_dir_path(self):
+        if 'output_dir' in self.config:
+            return self.config['output_dir']
         return os.path.join(self.get_top_dir(), self.config['output_subdir'])
     
     def get_preprocessing_dir_path(self):
         return os.path.join(self.get_top_dir(), self.config['preprocess']['output_subdir'])
     
     def get_input_images_dir_path(self):
-        return os.path.join(self.get_top_dir(), self.config['input_images_subdir'])
+        return os.path.join(self.get_input_dir(), self.config['input_images_subdir'])
     
     def get_interim_images_dir_path(self):
+        if 'interim_subdir' in self.config['preprocess']:
+            return os.path.join(self.get_top_dir(), self.config['preprocess']['interim_subdir'])
         return os.path.join(self.get_input_images_dir_path(), self.config['interim_images_subdir'])
     
     def get_filtered_labels_filename(self):
         return os.path.join(self.get_preprocessing_dir_path(), self.config['preprocess']['filtered_labels_filename'])
 
     def get_train_geojson_filename(self):
-        return os.path.join(self.get_input_images_dir_path(), self.config['input_images_labels_filename'])
+        return os.path.join(self.get_input_dir(), self.config['input_images_labels_filename'])
+
+    def get_class_labels_filename(self):
+        return os.path.join(self.get_input_dir(), self.config['input_class_labels_filename'])
     
     def get_model_name(self):
         if 'model' not in self.config or 'models' not in self.config:
-            raise ValueError(f"deep learning model uspecified in configuration file.")            
+            raise ValueError("deep learning model uspecified in configuration file.")
         model_name = self.config['model']
         if model_name not in self.config['models']:
-            raise ValueError(f"unkown deep learning model {model_name} specified.")
+            raise ValueError(f"unknown deep learning model {model_name} specified.")
         return model_name
     
     def get_yolo_id(self):

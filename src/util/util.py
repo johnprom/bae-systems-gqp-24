@@ -33,7 +33,7 @@ def update_data_config_class_names(ctxt, class_list):
     ctxt.class_names = class_list
 
 def load_class_mappings(ctxt):
-    json_file_path = os.path.join(ctxt.get_input_images_dir_path(), ctxt.config['input_class_labels_filename'])
+    json_file_path = ctxt.get_class_labels_filename()
     with open(json_file_path, 'r') as file:
         mappings = json.load(file)
     return mappings
@@ -43,7 +43,7 @@ def get_class_name_from_id(ctxt, id_key):
     return mappings.get(str(id_key), "Unknown ID")
 
 def load_annotations_master(ctxt):
-    file_path = os.path.join(ctxt.get_input_images_dir_path(), 'xView_train.geojson')
+    file_path = ctxt.get_train_geojson_filename()
     with open(file_path) as f:
         geojson_data = geojson.load(f)
     return geojson_data
@@ -55,7 +55,7 @@ def write_to_annotations_filtered(ctxt, filtered_annotations):
 
 def get_preprocessed_images_dir_path(ctxt, transform_type, split, maxres):
     config = ctxt.get_pipeline_config()
-    output_dir = os.path.join(ctxt.get_top_dir(), config['preprocess']['output_subdir'])
+    output_dir = ctxt.get_preprocessing_dir_path()
     method = config['preprocess_method']
 
     if method == 'tiling':

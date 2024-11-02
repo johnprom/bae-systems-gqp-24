@@ -7,19 +7,28 @@ generate_report: true # default false
 #
 # Global parameters
 #
-# top_dir: "../" # top-level directory
-# default to one directory up from the pipleline.py file, which usually will be the repository directory, but not necessarily
+# top_dir: "/home/dcfox1/git/bae-systems-gqp-24" # top-level directory, can be full path, defaults to ../
+# input_dir: "/home/dcfox1/pipeline_input" # input directory, can be full path, defaults to top_dir
+# output_dir: "/home/dcfox1/pipeline_output" # output directory, can be full path, defaults to <top_dir>/<output_subdir>
 #
 # run_clean: true # default false, deletes the output directory
 #
 #data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
 data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
+input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from input_dir, CHANGED: used to be subdir from top_dir
 #
-input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from top_dir
-interim_images_subdir: "interim" # REQUIRED subdir from input_images_subdir
-input_images_labels_filename: "xView_train.geojson" # REQUIRED inside input_images_subdir
-input_class_labels_filename: "xview_class_labels.json" # REQUIRED inside input_images_subdir
-output_subdir: "output" # REQUIRED subdir from top_dir
+#
+interim_images_subdir: "interim" # DEPRECATED, moved to preprocess, only used if preprocess:interim_subdir not defined
+#
+input_images_labels_filename: "xview_dataset_raw/xView_train.geojson" # REQUIRED inside input_dir
+# input_images_labels_filename: "xView_train.geojson" # intended to now be inside input_dir and not xview_dataset_raw
+# CHANGED: used to be subdir from top_dir
+#
+input_class_labels_filename: "xview_dataset_raw/xview_class_labels.json" # REQUIRED inside input_dir
+# input_class_labels_filename: "xview_class_labels.json" # intended to now be inside input_dir and not xview_dataset_raw
+# CHANGED: used to be subdir from top_dir
+#
+output_subdir: "output" # CHANGED: DEPRECATED: subdir from top_dir, only used if output_dir not defined
 model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
 use_cuda: true # Instructs all modules to use CUDA, default false
 trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, subdir from top_dir
@@ -45,6 +54,7 @@ preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing meth
 # Module-specific parameters
 preprocess:
   output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
+  #  interim_subdir: "preprocessed_datasets/interim" # REQUUIRED FOR PREPROCESSING, subdir from top_dir
   filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preoprocess:output_subdir
   clean_subdir: true # wipes out the preprocess output_subdir, default false
   train_split: 0.8 # REQUIRED FOR PREPROCESSING
