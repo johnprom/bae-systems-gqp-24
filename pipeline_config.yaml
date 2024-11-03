@@ -1,5 +1,5 @@
 # Execution flow parameters
-run_preprocess: true # default false
+run_preprocess: false # default false
 run_train: true # default false
 run_knee_discovery: true # default false
 generate_report: true # default false
@@ -71,13 +71,13 @@ knee_discovery:
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
   #
-  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  search_resolution_range: [0.5, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
   # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
   # if enabled_feeback is true, then this range is just the initial search
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
-  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
+  search_resolution_step: 0.5 # REQUIRED, the steps for the range above
   # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
   # example of range to be searched from above given a 640x640 original resolution
   # again, note that 640x640 would always be searched regardless
@@ -129,13 +129,13 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
     pretrained: # Specifies use of a pretrained model
       library: "ultralytics" # not used, here for reference
       trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
-    trained_model_filename: "yolov8m/{width}_{height}/{epochs}/{batch}/{freeze}/model.pt"
+    trained_model_filename: "yolov8m/model_{hashed_params}.pt"
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
     params:
       # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
       imgsz: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
       # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
       # That is, preprocess_methods:<method>:image_size
-      epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
-      batch: 16
+      epochs: 1 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+      batch: 256
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
