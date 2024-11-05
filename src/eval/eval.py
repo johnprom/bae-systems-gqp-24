@@ -14,6 +14,20 @@ from util.util import load_pipeline_config, update_data_config_val_path
 # from knee_discovery.knee_discovery import calc_degradation_factor
 
 def get_model(config):
+    """
+    Retrieves the configuration dictionary for a specified model.
+
+    Args:
+        config (dict): The configuration dictionary that includes model settings.
+    
+    Raises:
+        ValueError: If 'model' or 'models' is not present in the configuration,
+                    or if the specified model name is not found within 'models'.
+    
+    Returns:
+        dict: A dictionary of parameters and settings for the specified model.
+    """
+
     if 'model' not in config or 'models' not in config:
         raise ValueError("model not configured")
         
@@ -26,6 +40,16 @@ def get_model(config):
     return model_dict
 
 def drop_dup_results(ctxt, rcdf):
+    """
+    Removes duplicate entries in the results DataFrame based on a generated key.
+
+    Args:
+        ctxt: The pipeline context object.
+        rcdf (pd.DataFrame): DataFrame containing evaluation results.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with duplicate rows removed based on the unique key.
+    """
     temp_rcdf = rcdf.copy()
     # temp_rcdf['mAP_rounded'] = temp_rcdf['mAP'].round(3)  # Adjust the decimal places as needed
     temp_rcdf['key'] = (temp_rcdf['object_name'] + '_' + temp_rcdf['original_resolution_width'].astype(str) + '_'
@@ -37,14 +61,17 @@ def drop_dup_results(ctxt, rcdf):
 
 def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_size, mAP_list, is_knee):
     """
-    Log the evaluation results (mAP and image sizes) for knee discovery.
-    
+    Logs evaluation results (mAP and image sizes) for knee discovery.
+
     Args:
-    - orig_image_size: Tuple of (width, height) of the original images.
-    - degraded_image_size: Tuple of (width, height) of the degraded images.
-    - mAP_list: list Mean Average Precision of the model for this resolution, for name_list
+        ctxt: The pipeline context object.
+        num_names (int): Number of object classes.
+        name_list (list): List of object class names.
+        orig_image_size (tuple): Tuple of (width, height) of the original images.
+        degraded_image_size (tuple): Tuple of (width, height) of the degraded images.
+        mAP_list (list): List of Mean Average Precision values for each object class.
+        is_knee (bool): Flag indicating if the current evaluation is a knee point in knee discovery.
     """
-    
     # IAPC results file columns
     # self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
     #                      'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
@@ -91,12 +118,14 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
     
 def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     """
-    Log the evaluation results (mAP and image sizes) for knee discovery.
-    
+    Logs specific evaluation results (mAP and image sizes) for a knee discovery point.
+
     Args:
-    - orig_image_size: Tuple of (width, height) of the original images.
-    - degraded_image_size: Tuple of (width, height) of the degraded images.
-    - mAP: Mean Average Precision of the model for this resolution.
+        ctxt: The pipeline context object.
+        name (str): Object class name.
+        orig_image_size (tuple): Tuple of (width, height) of the original images.
+        degradation_factor (float): Factor by which the image is degraded.
+        mAP (float): Mean Average Precision of the model for the given resolution.
     """
     
     # IAPC results file columns
@@ -142,6 +171,19 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
         ctxt.results_cache_df = rcdf.copy()
     
 def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
+    
+    """
+    Calculates the degradation factor based on original and effective resolutions.
+
+    Args:
+        orig_res_w (float): Original resolution width.
+        orig_res_h (float): Original resolution height.
+        eff_res_w (float): Effective resolution width.
+        eff_res_h (float): Effective resolution height.
+    
+    Returns:
+        float: The degradation factor calculated from the resolutions.
+    """
     # orig_res_w = IAPC_df['original_resolution_width'].astype(float)
     # orig_res_h = IAPC_df['original_resolution_height'].astype(float)
     # eff_res_w = IAPC_df['effective_resolution_width'].astype(float)
@@ -155,16 +197,17 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
 
 def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path, knee):
     """
-    Run the model evaluation at a specific resolution and calculate mAP.
-    
+    Runs the model evaluation at a specific resolution and calculates mAP.
+
     Args:
-    - ctxt: The pipeline context object.
-    - baseline_image_size: Tuple of (width, height) of the baseline images.
-    - degraded_image_size: Tuple of (width, height) of the degraded images.
-    - val_degraded_dir_path: Path to the validation images for the current resolution.
+        ctxt: The pipeline context object.
+        baseline_image_size (tuple): Tuple of (width, height) of the baseline images.
+        degraded_image_size (tuple): Tuple of (width, height) of the degraded images.
+        val_degraded_dir_path (str): Path to the validation images for the current resolution.
+        knee (bool): Indicator for knee point in knee discovery.
     
     Returns:
-    - mAP: Mean Average Precision of the model for this resolution.
+        None
     """
     
     update_data_config_val_path(ctxt, val_degraded_dir_path)
