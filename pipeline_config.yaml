@@ -71,13 +71,13 @@ knee_discovery:
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
   #
-  search_resolution_range: [0.5, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
   # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
   # if enabled_feeback is true, then this range is just the initial search
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
-  search_resolution_step: 0.5 # REQUIRED, the steps for the range above
+  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
   # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
   # example of range to be searched from above given a 640x640 original resolution
   # again, note that 640x640 would always be searched regardless
