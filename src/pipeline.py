@@ -17,6 +17,13 @@ from reports.report import generate_report
 
 class Pipeline:
     def __init__(self, args):
+        """
+        Initializes the Pipeline class with the provided arguments.
+        Args:
+            args (argparse.Namespace): Command-line arguments, including config_filename and verbosity flag.
+        """
+
+        
         self.config_filename = args.config_filename
         self.config = load_pipeline_config(self.config_filename)
         self.verbose = args.verbose
@@ -82,47 +89,127 @@ class Pipeline:
             self.run_clean()
             
     def get_pipeline_config(self):
+        """
+        Returns the pipeline configuration dictionary.
+
+        Returns:
+            dict: The loaded configuration dictionary for the pipeline.
+        """
+
         return self.config
     
     def get_top_dir(self):
+        """
+        Returns the top directory path for the pipeline.
+
+        Returns:
+            str: Path of the top directory.
+        """
         if 'top_dir' in self.config:
             return self.config['top_dir']
         return os.path.join(os.path.dirname(__file__), '..')
 
     def get_input_dir(self):
+        """
+        Returns the input directory path for the pipeline.
+
+        Returns:
+            str: Path of the input directory.
+        """
         if 'input_dir' in self.config:
             return self.config['input_dir']
         return self.get_top_dir()
 
     def get_data_config_dir_path(self):
+        """
+        Returns the path to the data configuration directory.
+
+        Returns:
+            str: Full path of the data configuration file.
+        """
         return os.path.join(self.get_top_dir(), self.config['data_config_filename'])
         
     def get_output_dir_path(self):
+        """
+        Returns the output directory path for storing results.
+
+        Returns:
+            str: Full path to the output directory.
+        """
         if 'output_dir' in self.config:
             return self.config['output_dir']
         return os.path.join(self.get_top_dir(), self.config['output_subdir'])
     
     def get_preprocessing_dir_path(self):
+        """
+        Returns the directory path for storing preprocessed data.
+
+        Returns:
+            str: Full path to the preprocessing output directory.
+        """
         return os.path.join(self.get_top_dir(), self.config['preprocess']['output_subdir'])
     
     def get_input_images_dir_path(self):
+        """
+        Returns the directory path where input images are stored.
+
+        Returns:
+            str: Full path to the directory containing input images.
+        """
+
         return os.path.join(self.get_input_dir(), self.config['input_images_subdir'])
     
     def get_interim_images_dir_path(self):
+        """
+        Returns the directory path for storing interim processed images.
+
+        Returns:
+            str: Full path to the directory containing interim images, used during processing.
+        """
+
         if 'interim_subdir' in self.config['preprocess']:
             return os.path.join(self.get_top_dir(), self.config['preprocess']['interim_subdir'])
         return os.path.join(self.get_input_images_dir_path(), self.config['interim_images_subdir'])
     
     def get_filtered_labels_filename(self):
+        """
+        Returns the filename for storing filtered labels in the preprocessing directory.
+
+        Returns:
+            str: Full path to the file containing filtered labels.
+        """
         return os.path.join(self.get_preprocessing_dir_path(), self.config['preprocess']['filtered_labels_filename'])
 
     def get_train_geojson_filename(self):
+        """
+        Returns the filename for storing training data labels in GeoJSON format.
+
+        Returns:
+            str: Full path to the GeoJSON file containing training labels.
+        """
         return os.path.join(self.get_input_dir(), self.config['input_images_labels_filename'])
 
     def get_class_labels_filename(self):
+        """
+        Returns the filename for storing class labels for the input images.
+
+        Returns:
+            str: Full path to the file containing class labels for the input images.
+        """
+
         return os.path.join(self.get_input_dir(), self.config['input_class_labels_filename'])
     
     def get_model_name(self):
+        """
+        Retrieves the name of the deep learning model specified in the configuration.
+
+        Raises:
+            ValueError: If the 'model' or 'models' section is missing in the configuration
+                        or if the specified model name is unknown.
+
+        Returns:
+            str: The name of the model specified in the configuration.
+        """
         if 'model' not in self.config or 'models' not in self.config:
             raise ValueError("deep learning model uspecified in configuration file.")
         model_name = self.config['model']
@@ -131,10 +218,25 @@ class Pipeline:
         return model_name
     
     def get_yolo_id(self):
+        """
+        Retrieves the YOLO model ID based on model parameters from the configuration.
+
+        Returns:
+            str: The YOLO model ID, typically a name identifying the YOLO model variant.
+        """
         params = self.get_model_params()
         return params['name']
     
     def get_model_params(self):
+        """
+        Retrieves the configuration parameters for the specified model.
+
+        Raises:
+            ValueError: If the specified model is not found in the 'models' section of the configuration.
+
+        Returns:
+            dict: A dictionary of parameters for the specified model.
+        """
         model_name = self.get_model_name()
         if model_name not in self.config['models']:
             raise ValueError(f"unkown deep learning model {model_name} specified.")            
@@ -142,9 +244,28 @@ class Pipeline:
         return model_dict
     
     def get_train_labels_from_target_labels(self, target_labels):
+        """
+        Converts a list of target labels to their corresponding training labels.
+
+        Args:
+            target_labels (list): A list of target labels to be converted.
+
+        Returns:
+            list: A list of training labels corresponding to the input target labels.
+        """
+
         return [self.get_train_label_from_xview_label(xvl) for xvl in target_labels]
     
     def get_train_label_from_xview_label(self, xview_label):
+        """
+        Converts an individual xView label to its corresponding training label ID.
+
+        Args:
+            xview_label (str): The xView label to convert.
+
+        Returns:
+            int: The training label ID that corresponds to the input xView label.
+        """
         return self.xview_to_train_labels[xview_label]['train_type_id']
     
     # def get_model_id(self):
@@ -156,6 +277,10 @@ class Pipeline:
     #     return model_dict['id']
 
     def set_final_weights_path(self):
+        """
+        Sets the final weights path for the trained model based on the configuration and model parameters.
+        Raises ValueError if an unknown deep learning model is specified.
+        """
         if not self.is_model_yolo():
             ve = f"unknown deep learning model {self.get_model_name()} specified."
             raise ValueError(ve)
@@ -222,13 +347,27 @@ class Pipeline:
         #                                            freeze=freeze_str))
         
     def is_model_yolo(self):
+        """
+        Checks if the specified model is a YOLO model.
+
+        Returns:
+            bool: True if the model is a YOLO model, False otherwise.
+        """
+
         yolo_id = self.get_model_name()
         if type(yolo_id) == str and yolo_id.startswith('yolo'):
             return True
         return False
     
     def use_eval_cache(self):
-        if 'run_clean' in self.config and self.config['run_clean']:
+        """
+        Determines if the evaluation cache should be used based on configuration flags.
+
+        Returns:
+            bool: True if the evaluation cache should be used, False otherwise.
+        """
+
+        if 'run_clean' in self.config and self.config['run_clean']:\
             return False
         if "run_preprocess" in self.config and self.config["run_preprocess"]:
             return False
@@ -243,6 +382,10 @@ class Pipeline:
         return False        
     
     def run_clean(self):
+        """
+        Cleans up the output directory by removing results and reports.
+        This does NOT delete preprocessed images or fine-tuned models.
+        """
         # remove output directory if exists
         # This does NOT delete preprocessed images and not tuned models either
         # It just deletes results and reports
@@ -256,6 +399,10 @@ class Pipeline:
             print("done running clean")
     
     def run_pipeline(self):
+        """
+        Runs the complete pipeline including preprocessing, training, knee discovery, and reporting.
+        """
+
         
         pipeline_config = self.config
     
