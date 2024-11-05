@@ -1,5 +1,5 @@
 # Execution flow parameters
-run_preprocess: false # default false
+run_preprocess: true # default false
 run_train: true # default false
 run_knee_discovery: true # default false
 generate_report: true # default false
