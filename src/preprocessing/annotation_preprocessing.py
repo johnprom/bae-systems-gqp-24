@@ -7,6 +7,25 @@ import geopandas as gpd
 import json
 
 def pixel_to_relative_coords(pixel_coords, og_x, og_y, max_len):
+    """
+    Converts bounding box pixel coordinates to relative coordinates normalized by a maximum dimension.
+    This function adds padding offsets if the original dimensions are smaller than `max_len`.
+
+    Args:
+        pixel_coords (str): Bounding box coordinates in the format "xmin,ymin,xmax,ymax".
+        og_x (int): Original width of the image.
+        og_y (int): Original height of the image.
+        max_len (int): Maximum length (either width or height) to normalize the coordinates.
+
+    Returns:
+        str: A space-separated string of relative coordinates in the format "<x_center> <y_center> <width> <height>",
+             where each value is normalized by `max_len` and rounded to six decimal places.
+    
+    Computation:
+        - Adds padding offset based on the difference between `max_len` and the original dimensions.
+        - Calculates the center coordinates, width, and height of the bounding box relative to `max_len`.
+        - Outputs normalized coordinates suitable for YOLO format.
+    """
     # [xmin, ymin, xmax, ymax]
     xmin, ymin, xmax, ymax = map(int, pixel_coords.split(','))
     # add offset to account for padding
@@ -39,6 +58,11 @@ target_folder = '../../preprocessed_datasets/dataset_1/labels' # dir for new ann
 # iterate through all files in the target directory
 for filename in os.listdir(directory):
     if filename.endswith('.tif'):
+        """
+        Construct the full path to the .tif file and open it with rasterio
+        to retrieve the image dimensions (width and height in pixels).
+        These dimensions are used for calculating normalized coordinates later.
+        """
 
         file_path = os.path.join(directory, filename)
         with rasterio.open(file_path) as src:
@@ -46,9 +70,19 @@ for filename in os.listdir(directory):
             pixel_y = src.height
             target_img = filename
         print("target_img " + target_img)
-
+        
+        """
+        Define the output .txt file path in the target_folder. 
+        The new file has the same name as the .tif image but with a .txt extension.
+        This file will store the annotations in YOLO format.
+        """
         txt_filename = os.path.join(target_folder, target_img.replace('.tif', '.txt'))
-
+        
+        """
+        Define the output .txt file path in the target_folder. 
+        The new file has the same name as the .tif image but with a .txt extension.
+        This file will store the annotations in YOLO format.
+        """
         # load the og GeoJSON file
         with open('annotations_master/xView_train.geojson') as f:
             geojson_data = json.load(f)
@@ -58,8 +92,12 @@ for filename in os.listdir(directory):
             feature for feature in geojson_data['features']
             if feature['properties'].get('image_id') == target_img
         ]
-
-        # write to annotation file (overwrite if it exists)
+        
+        """
+        Write the filtered annotations to a .txt file in the target folder.
+        Each annotation is written in YOLO format: <class_id> <x_center> <y_center> <width> <height>.
+        Additionally, a debug line is written with detailed information for each feature.
+        """
         with open(txt_filename, 'w') as txt_file:
             for feature in filtered_features:
                 properties = feature['properties']

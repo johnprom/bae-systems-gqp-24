@@ -75,11 +75,28 @@ xview_class2index = {
 
 class XViewTiler:
     def __init__(self, tile_size=TILE_SIZE, overlap=OVERLAP):
+        """
+        Initializes the tiler with specified tile size and overlap.
+
+        Args:
+            tile_size (int): The size of each square tile (default 640).
+            overlap (int): The number of overlapping pixels between tiles (default 100).
+        """
         self.tile_size = tile_size
         self.overlap = overlap
 
     def convert_bbox_to_yolo_format(self, bbox, img_w, img_h):
-        """Convert (x1, y1, x2, y2) to YOLO format (x_center, y_center, width, height) normalized."""
+        """
+        Converts bounding box coordinates to YOLO format (center coordinates, width, height), normalized by image dimensions.
+
+        Args:
+            bbox (list[int]): Bounding box as [x1, y1, x2, y2].
+            img_w (int): Width of the image or tile.
+            img_h (int): Height of the image or tile.
+
+        Returns:
+            list[float]: Bounding box in YOLO format as [x_center, y_center, width, height].
+        """
         x1, y1, x2, y2 = bbox
         x_center = ((x1 + x2) / 2) / img_w
         y_center = ((y1 + y2) / 2) / img_h
@@ -88,14 +105,34 @@ class XViewTiler:
         return [x_center, y_center, bbox_width, bbox_height]
 
     def save_yolo_labels(self, bboxes, classes, output_path):
-        """Save YOLO format labels to a .txt file."""
+        """
+        Saves bounding boxes and classes in YOLO format to a .txt file.
+
+        Args:
+            bboxes (list[list[float]]): List of bounding boxes in YOLO format.
+            classes (list[int]): List of class IDs corresponding to each bounding box.
+            output_path (str): File path for saving the label file.
+        """
+        
         with open(output_path, 'w') as f:
             for bbox, cls in zip(bboxes, classes):
                 yolo_bbox = ' '.join([str(x) for x in bbox])
                 f.write(f"{cls} {yolo_bbox}\n")
 
     def get_class_wise_data(self, features, file_path, class_id_list, train_id_list):
-        """Filter class-wise data for a specific class."""
+        """
+        Filters and organizes annotations by class and image, based on a specified list of class IDs.
+
+        Args:
+            features (list[dict]): List of features from the GeoJSON file with bounding box data.
+            file_path (str): Directory path where images are stored.
+            class_id_list (list[int]): List of target class IDs to filter.
+            train_id_list (list[int]): List of new class IDs for remapping.
+
+        Returns:
+            dict: Dictionary with image filenames as keys and bounding box data for each class as values.
+        """
+        
         for class_id in class_id_list:
             if class_id not in xview_class2index:
                 print(f"Class ID {class_id} does not exist in the label dictionary.")
@@ -120,7 +157,19 @@ class XViewTiler:
 
     def tile_image_and_save(self, data_dict, file_path, output_img_dir, output_lbl_dir):
         """
-        Function to tile images from a data_dict, adjust bounding boxes for each tile, and save the tiles and labels.
+        Tiles images from `data_dict`, adjusts bounding boxes for each tile, and saves the tiles and labels.
+
+        Args:
+            data_dict (dict): Dictionary where each key is an image filename, and the value is a list of bounding box annotations.
+            file_path (str): Directory path where the original images are stored.
+            output_img_dir (str): Directory path to save the tiled image files.
+            output_lbl_dir (str): Directory path to save YOLO format label files.
+
+        Workflow:
+            - **Load Image**: Loads each image specified in `data_dict`.
+            - **Calculate Tiling Steps**: Determines the number of tiles needed in both x and y directions, based on tile size and overlap.
+            - **Generate Tiles**: Iterates over each tile position, crops the tile, and adjusts bounding boxes to fit within the tile.
+            - **Filter and Save Annotations**: Filters bounding boxes within each tile and saves them in YOLO format along with the tile image.
         """
         for img_id, annotations in data_dict.items():
             img_path = os.path.join(file_path, img_id)

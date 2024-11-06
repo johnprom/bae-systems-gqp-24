@@ -16,6 +16,24 @@ from preprocessing.class_filtering import filter_classes
 #     print("Finished clearing preprocessed data folders.")
 
 def train_test_split(ctxt):
+    """
+    Splits images and their annotations into training and validation sets based on a specified ratio
+    and copies them into respective directories for model training and validation.
+
+    Args:
+        ctxt: Context object containing configuration, file paths, and verbosity settings.
+
+    Workflow:
+        - Retrieves the train-validation split ratio from the configuration.
+        - Lists all images in the interim directory with supported extensions.
+        - Calculates the number of images for the training set based on the split ratio.
+        - Randomly selects training images and assigns the remaining to validation.
+        - Creates lists of corresponding annotation files for each image set.
+        - Copies images and annotations to the appropriate train/val directories.
+
+    Returns:
+        None: Files are directly copied into training and validation directories specified in `ctxt`.
+    """
     config = ctxt.get_pipeline_config()
     train_split = config['preprocess']['train_split'] # 0.0 to 1.0
     # input_images_dir = os.path.join(config['top_dir'], config['input_images_subdir'])
@@ -59,6 +77,26 @@ def train_test_split(ctxt):
 
 # main entry point for preprocessing
 def run_preprocessing(ctxt):
+    """
+    Runs the preprocessing pipeline, which includes cleaning directories, filtering classes, 
+    and preparing images for training and validation.
+
+    Args:
+        ctxt: Context object containing configuration settings, file paths, and methods for preprocessing.
+
+    Workflow:
+        - **Clean Directories**: Clears output and interim directories if specified in the configuration.
+        - **Filter Classes**: Filters annotations to retain only target classes specified in the configuration.
+        - **Preprocessing Method**: Applies the specified preprocessing method:
+            - `padding`: Adjusts image size with padding.
+            - `tiling`: Divides images into tiles.
+        - **Set Directories**: Creates train and validation directories based on the preprocessing method.
+        - **Split Data**: Performs a train-test split on the preprocessed images.
+        - **Update Config Paths**: Updates YOLO configuration with paths for training and validation datasets.
+
+    Returns:
+        None: This function directly modifies file directories and updates paths in YOLO data configuration.
+    """
     print("Start preprocessing")
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_preprocessing_dir_path()

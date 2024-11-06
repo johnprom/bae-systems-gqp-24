@@ -1,6 +1,33 @@
 from util.util import get_class_name_from_id, load_annotations_master, update_data_config_class_count, update_data_config_class_names, write_to_annotations_filtered
 
 def filter_classes(ctxt, target_class_ids: list[int]):
+    """
+    Filters the features in the original GeoJSON annotations based on specified class IDs
+    and updates the YOLO configuration accordingly.
+
+    Args:
+        ctxt: Context object containing configuration, file paths, and other settings.
+        target_class_ids (list[int]): List of class IDs to keep in the filtered annotations.
+                                      These IDs will be remapped to start from 0.
+
+    Workflow:
+        - Loads the original GeoJSON annotations from the master file.
+        - Filters the features to retain only those whose `type_id` matches one of `target_class_ids`.
+        - For each retained feature, keeps only:
+            - 'bounds_imcoords': Bounding box coordinates.
+            - 'type_id': Remapped to start from 0 based on the position in `target_class_ids`.
+            - 'image_id': The ID of the image the annotation belongs to.
+        - Saves the filtered annotations to a new GeoJSON file.
+        - Retrieves class names for each `target_class_id` and updates the YOLO configuration:
+            - Sets the `class_names` in YOLO data configuration.
+            - Sets the total `class_count` in YOLO data configuration.
+
+    Returns:
+        None: Writes output directly to a new GeoJSON file and updates YOLO configuration.
+
+    """
+
+    
     # load the original GeoJSON file
     geojson_data = load_annotations_master(ctxt)
     # if the feature is part of our target set keep and retain:
