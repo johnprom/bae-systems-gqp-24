@@ -23,6 +23,16 @@ exts = ('.tif', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')  # Common imag
 label_ext = '.txt'
 
 def replace_image_ext_with_label(filepath):
+    """
+    Replaces the file extension of an image file with a label extension if it matches specified extensions.
+
+    Args:
+        filepath (str or Path): The file path of the image whose extension needs to be replaced.
+
+    Returns:
+        Path: A Path object with the file extension replaced by `label_ext` if it matches specified extensions.
+              Otherwise, returns the original filepath.
+    """
     path = Path(filepath)
 
     if path.suffix.lower() in exts:
@@ -32,8 +42,21 @@ def replace_image_ext_with_label(filepath):
 
 def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, corrupted_counter):
     """
-    Degrade images by resizing them and store them in the degraded_dir.
-    For testing, this method is currently only copying images from baseline_dir to degraded_dir.
+    Degrades images by resizing them and stores them in the specified degraded directory.
+    If `orig_image_size` and `degraded_image_size` are the same, images are simply copied.
+    Otherwise, images are resized to the degraded size and then resized back to the original size.
+
+    Args:
+        ctxt: The pipeline context object containing configurations and settings.
+        orig_image_size (tuple): A tuple (width, height) of the original image size.
+        degraded_image_size (tuple): A tuple (width, height) of the degraded image size.
+        degraded_dir (str): Directory where the degraded images will be stored.
+        corrupted_counter (int): Counter tracking corrupted or unreadable images.
+
+    Returns:
+        tuple: A tuple containing:
+            - num_images (int): The number of images processed.
+            - corrupted_counter (int): Updated counter for corrupted images encountered.
     """
     # orig_image_size and degraded_image_size are tuples of (width, height)
 
@@ -101,7 +124,18 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
 
 def run_eval_on_initial_resolutions(ctxt):
     """
-    Evaluate the model on the baseline resolution and log the results.
+    Evaluates the model on the baseline resolution as specified in the pipeline configuration
+    and logs the evaluation results. This function retrieves the baseline image dimensions from 
+    the configured preprocessing method and then runs the evaluation.
+
+    Args:
+        ctxt: The pipeline context object containing the pipeline configuration and relevant paths.
+
+    Behavior:
+        - Retrieves baseline resolution dimensions from the preprocessing configuration.
+        - Calls `run_eval` with the baseline resolution to perform model evaluation.
+        - Note: The `run_eval` function internally logs the results, so additional logging or
+                calls to `update_results()` are not needed here.
     """
     config = ctxt.get_pipeline_config()
     preprocess_method = config['preprocess_method']
@@ -115,6 +149,25 @@ def run_eval_on_initial_resolutions(ctxt):
     # Note: No need to call update_results() here since run_eval() already calls it.
 
 def run_eval_on_degraded_images(ctxt):
+    """
+    Evaluates the model on a range of degraded image resolutions, specified in the configuration,
+    and logs the results. This function systematically reduces image resolution within the range 
+    defined by the knee discovery parameters, creating degraded copies and evaluating the model on each.
+
+    Args:
+        ctxt: The pipeline context object containing configuration settings, paths, and options.
+
+    Behavior:
+        - Retrieves baseline and knee discovery parameters from the pipeline configuration.
+        - Iteratively reduces resolution of images in specified steps and evaluates the model on each degraded set.
+        - Logs any corrupted images that could not be processed during degradation.
+    
+    Log Output:
+        - Prints status messages if verbosity is enabled, detailing degradation ranges, steps, and corrupted images.
+        - Final report of corrupted images if any were encountered during processing.
+
+    """
+
     config = ctxt.get_pipeline_config()
     preprocess_method = config['preprocess_method']
     pp_params = config['preprocess_methods'][preprocess_method]
@@ -164,6 +217,21 @@ def run_eval_on_degraded_images(ctxt):
     
 
 def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
+    """
+    Calculates the degradation factor based on the original and effective image resolutions.
+    The degradation factor is computed as the square root of the area ratio between the effective 
+    and original resolutions.
+
+    Args:
+        orig_res_w (float or pd.Series): Original resolution width.
+        orig_res_h (float or pd.Series): Original resolution height.
+        eff_res_w (float or pd.Series): Effective resolution width.
+        eff_res_h (float or pd.Series): Effective resolution height.
+    
+    Returns:
+        pd.Series: The degradation factor calculated from the resolutions, representing the ratio
+                   of effective resolution to original resolution.
+    """
     
     degradation_factor_w = eff_res_w / orig_res_w
     degradation_factor_h = eff_res_h / orig_res_h
@@ -173,12 +241,28 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
 
 def calculate_knee(ctxt, class_name, results_class_df):
     """
-    Calculate the knee in the IAPC curve using mAP values.
+    Calculates the "knee" point in the IAPC curve, where mAP (mean Average Precision) values
+    exhibit a significant change, indicating an optimal balance between resolution and performance.
+    
     Args:
-    - results: A list of dictionaries with 'degraded_width' and 'mAP' keys.
+        ctxt: The pipeline context object containing configuration and verbosity settings.
+        class_name (str): Name of the class for which the knee is being calculated.
+        results_class_df (pd.DataFrame): DataFrame with columns 'original_resolution_width', 
+                                         'original_resolution_height', 'effective_resolution_width',
+                                         'effective_resolution_height', and 'mAP' for the given class.
 
     Returns:
-    - knee_resolution: The resolution at which the knee occurs.
+        tuple: A tuple containing two lists:
+            - x_out_list (list): A list of degradation factors where knee points are identified.
+            - y_out_list (list): A list of corresponding mAP values at the identified knee points.
+
+    Behavior:
+        - Converts resolution columns to floating-point values and calculates degradation factors.
+        - Filters out mAP values below a threshold (0.01) to focus on meaningful data points.
+        - Identifies knee points using the `KneeLocator` to detect the "elbow" in the degradation vs. mAP curve.
+        - Logs knee points if verbosity is enabled in the context.
+        - Calls `update_knee_results` for each knee to store results in the context.
+
     """
     orig_res_w = results_class_df['original_resolution_width'].astype(float)
     orig_res_h = results_class_df['original_resolution_height'].astype(float)
@@ -221,6 +305,32 @@ def calculate_knee(ctxt, class_name, results_class_df):
     return x_out_list, y_out_list
     
 def run_knee_discovery(ctxt):
+    """
+    Runs the knee discovery process to identify optimal image resolutions at which model performance 
+    (mean Average Precision, mAP) experiences a significant change. This process iteratively degrades 
+    image resolution, evaluates the model, and identifies knee points in the performance curve.
+    
+    Args:
+        ctxt: The pipeline context object containing configurations, paths, and verbosity settings.
+
+    Behavior:
+        - Initializes output paths and clears previous knee discovery results if configured to do so.
+        - Runs evaluation on initial degraded resolutions to populate a baseline.
+        - Loads or calculates degradation factors for each resolution.
+        - Iterates over each class to identify the knee point in the degradation curve.
+            - If a binary search algorithm is specified, it refines the knee point by iterating over nearby 
+              degradation factors until convergence is achieved within a specified tolerance or a maximum 
+              number of iterations.
+            - Uses `KneeLocator` to identify knee points and logs details if verbosity is enabled.
+        - Updates and saves the final knee discovery results to the specified output file.
+
+    Log Output:
+        - Prints status updates for the knee discovery process, including convergence checks and detected knee points.
+        - Prints a summary of discovered knee points or a notification if no knee point is found for a class.
+
+    Returns:
+        None
+    """
     print("Start with run_knee_discovery")
     
     config = ctxt.get_pipeline_config()
