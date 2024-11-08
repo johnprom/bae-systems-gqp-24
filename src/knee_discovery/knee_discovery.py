@@ -13,7 +13,8 @@ import pandas as pd
 from pathlib import Path
 import shutil
 
-from kneed import KneeLocator
+# Removed import of KneeLocator since we're replacing it
+# from kneed import KneeLocator
 from PIL import Image
 
 # from util.util import get_preprocessed_images_dir_path, calc_degradation_factor
@@ -241,9 +242,9 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
 
 def calculate_knee(ctxt, class_name, results_class_df):
     """
-    Calculates the "knee" point in the IAPC curve, where mAP (mean Average Precision) values
-    exhibit a significant change, indicating an optimal balance between resolution and performance.
-    
+    Calculates the "knee" point in the IAPC curve using the double derivative method with smoothing,
+    ignoring the first 20% of data points.
+
     Args:
         ctxt: The pipeline context object containing configuration and verbosity settings.
         class_name (str): Name of the class for which the knee is being calculated.
@@ -253,57 +254,96 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
     Returns:
         tuple: A tuple containing two lists:
-            - x_out_list (list): A list of degradation factors where knee points are identified.
-            - y_out_list (list): A list of corresponding mAP values at the identified knee points.
+            - x_out_list (list): A list containing the degradation factor where the knee point is identified.
+            - y_out_list (list): A list containing the corresponding mAP value at the knee point.
 
     Behavior:
         - Converts resolution columns to floating-point values and calculates degradation factors.
         - Filters out mAP values below a threshold (0.01) to focus on meaningful data points.
-        - Identifies knee points using the `KneeLocator` to detect the "elbow" in the degradation vs. mAP curve.
-        - Logs knee points if verbosity is enabled in the context.
-        - Calls `update_knee_results` for each knee to store results in the context.
+        - Ignores the first 20% of data points while calculating the knee.
+        - Applies smoothing to the mAP values.
+        - Calculates the first and second derivatives.
+        - Identifies the knee point as the point with maximum absolute second derivative.
+        - Logs knee point if verbosity is enabled in the context.
+        - Calls `update_knee_results` to store the knee point in the context.
 
     """
+    import numpy as np
+    import pandas as pd
+
+    # Get degradation factors and mAP values
     orig_res_w = results_class_df['original_resolution_width'].astype(float)
     orig_res_h = results_class_df['original_resolution_height'].astype(float)
     eff_res_w = results_class_df['effective_resolution_width'].astype(float)
     eff_res_h = results_class_df['effective_resolution_height'].astype(float)
     mAP_values_series = results_class_df['mAP']
     degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
-    degradation_factor_list = degradation_factor_series.to_list()
     
+    degradation_factor_list = degradation_factor_series.to_list()
     mAP_values = mAP_values_series.to_list()
     width_list = orig_res_w.to_list()
     height_list = orig_res_h.to_list()
 
-    # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
+    # If all mAP are zero, return empty lists
     if all(mAP <= 0.01 for mAP in mAP_values):
         return [], []
     
-    x = [d for i, d in enumerate(degradation_factor_list) if mAP_values[i] > 0.01]
-    y = [m for m in mAP_values if m > 0.01]
-    w = [w for i, w in enumerate(width_list) if mAP_values[i] > 0.01]
-    h = [h for i, h in enumerate(height_list) if mAP_values[i] > 0.01]
-    
-    if len(x) == 0 or len(y) == 0:
+    # Filter out mAP values <= 0.01
+    filtered_data = [(d, m, w, h) for d, m, w, h in zip(degradation_factor_list, mAP_values, width_list, height_list) if m > 0.01]
+    if len(filtered_data) == 0:
+        return [], []
+    x_list, y_list, w_list, h_list = zip(*filtered_data)
+
+    # Sort data based on x (degradation factors)
+    sorted_data = sorted(zip(x_list, y_list, w_list, h_list), key=lambda pair: pair[0])
+    x_sorted, y_sorted, w_sorted, h_sorted = zip(*sorted_data)
+
+    # Ignore first 20% of data
+    N = len(x_sorted)
+    start_index = int(0.2 * N)
+    x_used = x_sorted[start_index:]
+    y_used = y_sorted[start_index:]
+    w_used = w_sorted[start_index:]
+    h_used = h_sorted[start_index:]
+
+    if len(x_used) < 3:
+        # Not enough data points to calculate derivatives
         return [], []
 
-    # kneedle = KneeLocator(x_interp, y_interp, curve='concave', direction='increasing')
+    # Apply smoothing to y_used
+    window_size = 5
+    y_series = pd.Series(y_used)
+    y_smoothed = y_series.rolling(window=window_size, center=True, min_periods=1).mean()
 
-    # kneedle = KneeLocator(degradation_factor_list, mAP_values, curve='concave', direction='increasing')
-    kneedle = KneeLocator(x, y, curve='concave', direction='increasing', online=True)
-    x_out_list = list(sorted(kneedle.all_knees))
-    y_out_list = kneedle.all_knees_y
+    # Convert x_used to numpy array
+    x_array = np.array(x_used)
+    y_smoothed_array = y_smoothed.to_numpy()
+
+    # Compute first derivative
+    dy_dx = np.gradient(y_smoothed_array, x_array)
+    # Compute second derivative
+    d2y_dx2 = np.gradient(dy_dx, x_array)
+
+    # Find the index where the absolute value of second derivative is maximized
+    knee_index_relative = np.argmax(np.abs(d2y_dx2))
+    # Get the absolute index in the original x_sorted array
+    knee_index = start_index + knee_index_relative
+
+    x_knee = x_sorted[knee_index]
+    y_knee = y_sorted[knee_index]
+    w_knee = w_sorted[knee_index]
+    h_knee = h_sorted[knee_index]
+
     if ctxt.verbose:
-        print("Knees:")
-        print(f"  {x_out_list}")
-        print(f"  {y_out_list}")
-    
-    for i, x in enumerate(x_out_list):
-        update_knee_results(ctxt, class_name, (w[0], h[0]), x, y_out_list[i])
+        print("Knee found at:")
+        print(f"  Degradation factor: {x_knee}")
+        print(f"  mAP: {y_knee}")
+
+    # Update the knee results
+    update_knee_results(ctxt, class_name, (w_knee, h_knee), x_knee, y_knee)
+
+    return [x_knee], [y_knee]
         
-    return x_out_list, y_out_list
-    
 def run_knee_discovery(ctxt):
     """
     Runs the knee discovery process to identify optimal image resolutions at which model performance 
