@@ -367,7 +367,7 @@ class Pipeline:
             bool: True if the evaluation cache should be used, False otherwise.
         """
 
-        if 'run_clean' in self.config and self.config['run_clean']:\
+        if 'run_clean' in self.config and self.config['run_clean']:
             return False
         if "run_preprocess" in self.config and self.config["run_preprocess"]:
             return False
