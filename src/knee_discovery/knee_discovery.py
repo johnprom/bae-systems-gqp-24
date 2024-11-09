@@ -243,7 +243,7 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
 def calculate_knee(ctxt, class_name, results_class_df):
     """
     Calculates the "knee" point in the IAPC curve using the double derivative method with smoothing,
-    ignoring the first 20% of data points.
+    ignoring the first 20% and the last 20% of data points.
 
     Args:
         ctxt: The pipeline context object containing configuration and verbosity settings.
@@ -260,7 +260,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
     Behavior:
         - Converts resolution columns to floating-point values and calculates degradation factors.
         - Filters out mAP values below a threshold (0.01) to focus on meaningful data points.
-        - Ignores the first 20% of data points while calculating the knee.
+        - Ignores the first 20% and the last 20% of data points while calculating the knee.
         - Applies smoothing to the mAP values.
         - Calculates the first and second derivatives.
         - Identifies the knee point as the point with maximum absolute second derivative.
@@ -298,13 +298,17 @@ def calculate_knee(ctxt, class_name, results_class_df):
     sorted_data = sorted(zip(x_list, y_list, w_list, h_list), key=lambda pair: pair[0])
     x_sorted, y_sorted, w_sorted, h_sorted = zip(*sorted_data)
 
-    # Ignore first 20% of data
+    # Ignore first 20% and last 20% of data
     N = len(x_sorted)
     start_index = int(0.2 * N)
-    x_used = x_sorted[start_index:]
-    y_used = y_sorted[start_index:]
-    w_used = w_sorted[start_index:]
-    h_used = h_sorted[start_index:]
+    end_index = N - int(0.2 * N)
+    if start_index >= end_index:
+        # Not enough data points after slicing
+        return [], []
+    x_used = x_sorted[start_index:end_index]
+    y_used = y_sorted[start_index:end_index]
+    w_used = w_sorted[start_index:end_index]
+    h_used = h_sorted[start_index:end_index]
 
     if len(x_used) < 3:
         # Not enough data points to calculate derivatives
@@ -343,6 +347,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
     update_knee_results(ctxt, class_name, (w_knee, h_knee), x_knee, y_knee)
 
     return [x_knee], [y_knee]
+
         
 def run_knee_discovery(ctxt):
     """
