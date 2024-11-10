@@ -299,28 +299,6 @@ class Pipeline:
             self.final_weights_path = None
             return
         
-        # input_width = model_params['imgsz']
-        # input_height = input_width
-        # # input_width, input_height = model_dict['input_image_size'][0], model_dict['input_image_size'][1]
-        # num_epochs = model_params['epochs']
-        # batch_size = model_params['batch']
-        
-        # TODO: KENDALL? GABE? DAN?
-        # Train your model here. The following is just dummy code
-        
-        # model_params['data'] = self.config['data_config_path']
-        # train_params = ctxt.config['models']
-        # train_params = {
-        # 'data': 'data_config_path
-        # 'epochs': num_epochs,
-        # 'imgsz': input_width,
-        # 'batch': 16,              # Batch size
-        # 'freeze': [0, 1, 2, 3, 4, 5, 6],  # Freeze first 7 layers (backbone)
-        # }
-        
-        # ft_model = base_model.train(data=data_config_path, epochs=num_epochs, imgsz=input_width, batch=16, freeze=list(range(7)))
-        # ft_model = base_model.train(**model_params)
-        
         params_str = ""
         keys = sorted(list(model_params.keys()))
         for key in keys:
@@ -334,18 +312,6 @@ class Pipeline:
             self.get_top_dir(), self.config['trained_models_subdir'], 
             trained_model_filename_template.format(hashed_params=str(params_hash)))
     
-        # if 'freeze' in model_params and len(model_params['freeze']) > 0:
-        #     freeze_str = '_'.join(map(str, model_params['freeze']))
-        # else:
-        #     freeze_str = 'No_Freeze'
-        # self.final_weights_path = os.path.join(
-        #     self.get_top_dir(), self.config['trained_models_subdir'], 
-        #     trained_model_filename_template.format(width=model_params['imgsz'], 
-        #                                            height=model_params['imgsz'],
-        #                                            epochs=model_params['epochs'],
-        #                                            batch=model_params['batch'],
-        #                                            freeze=freeze_str))
-        
     def is_model_yolo(self):
         """
         Checks if the specified model is a YOLO model.
@@ -446,8 +412,6 @@ def main():
         
     pipeline_context = Pipeline(args)
 
-    config = pipeline_context.get_pipeline_config()
-    
     pipeline_context.run_pipeline()
         
     print("Exited Main.")
