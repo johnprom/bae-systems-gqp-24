@@ -184,10 +184,6 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     Returns:
         float: The degradation factor calculated from the resolutions.
     """
-    # orig_res_w = IAPC_df['original_resolution_width'].astype(float)
-    # orig_res_h = IAPC_df['original_resolution_height'].astype(float)
-    # eff_res_w = IAPC_df['effective_resolution_width'].astype(float)
-    # eff_res_h = IAPC_df['effective_resolution_height'].astype(float)
     
     degradation_factor_w = eff_res_w / orig_res_w
     degradation_factor_h = eff_res_h / orig_res_h
