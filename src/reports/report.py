@@ -33,6 +33,16 @@ knee_type_to_readable = {
     }
 
 def get_timestr_file_last_mod(filename):
+    """
+    Generates a timestamp string representing the last modification time of a file, including fractional seconds for precision.
+
+    Args:
+        filename (str): The name or path of the file whose modification time is to be retrieved.
+
+    Returns:
+        str: A formatted string representing the file's last modification time, including fractional seconds (e.g., `20231110123456_123456`).
+    """
+
     file_path = Path(filename)
     mod_time = file_path.stat().st_mtime
     mod_time_dt = datetime.datetime.fromtimestamp(mod_time)
@@ -42,6 +52,16 @@ def get_timestr_file_last_mod(filename):
     return final_time
 
 def generate_report(ctxt):
+    """
+    Generates a report based on the results from the knee discovery module and saves it in the configured directory.
+
+    Args:
+        ctxt: Context object containing configuration, file paths, and methods for accessing output directories.
+
+    Returns:
+        None: Creates and saves a PDF report based on results data and configuration settings.
+    """
+
     config = ctxt.config
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])

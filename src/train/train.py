@@ -10,6 +10,15 @@ import os
 from ultralytics import YOLO
 
 def run_finetuning(ctxt):
+    """
+    Runs the fine-tuning process for a YOLO model using the specified context and configuration.
+
+    Args:
+        ctxt: Context object containing configuration, model details, and utility methods.
+
+    Returns:
+        None: Trains the model and saves the fine-tuned weights to the specified path.
+    """
     
     print("Start Running Fine-tuning.")
             
