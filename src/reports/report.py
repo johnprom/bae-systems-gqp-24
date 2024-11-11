@@ -64,11 +64,19 @@ def generate_report(ctxt):
 
     config = ctxt.config
     output_top_dir = ctxt.get_output_dir_path()
+
+    reports_path = os.path.join(output_top_dir, config['report']['output_subdir'])
+    
+    if 'clean_subdir' in config['report'] and config['report']['clean_subdir']:
+        shutil.rmtree(reports_path)
+
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
     results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
-    reports_path = os.path.join(output_top_dir, config['report']['output_subdir'])
+
     report_path = os.path.join(reports_path, get_timestr_file_last_mod(results_filename))
+
     results_filename_in_report_path = os.path.join(report_path, os.path.basename(results_filename))
+
     hyperparams_path = os.path.join(output_top_dir, config['train']['output_subdir'])
     hyperparams_filename = os.path.join(hyperparams_path, config['train']['hyperparameters_filename'])
     hyperparams_filename_in_report_path = os.path.join(report_path, os.path.basename(hyperparams_filename))
@@ -85,22 +93,63 @@ def generate_report(ctxt):
         display_hyperparams = False
     
     os.makedirs(report_path, exist_ok=True)
+    
+    for filepath in os.listdir(results_path):
+        res_filename = os.path.join(results_path, filepath)
+        res_filename_in_report_path = os.path.join(report_path, filepath)
+        if os.path.isfile(res_filename):
+            try:
+                shutil.copy2(res_filename, res_filename_in_report_path)
+            except PermissionError:
+                print(f"Report Generator does not have permission to access {res_filename}!")
+                return
+            except IsADirectoryError:
+                print(f"Report Generator: results csv file {results_filename} "
+                      + f"or report destination file {results_filename_in_report_path} is a directory. "
+                      + "Please fix and re-run Report Generator.")
+                return
+            except shutil.SameFileError:
+                # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
+                pass
+        else:
+            try:
+                shutil.copytree(res_filename, res_filename_in_report_path)
+            except PermissionError:
+                print(f"Report Generator does not have permission to access {res_filename}!")
+                return
+        
 
-    if not os.path.exists(results_filename_in_report_path):
-        try:
-            shutil.copy2(results_filename, results_filename_in_report_path)
-        except PermissionError:
-            print("Report Generator does not have permission to access the results csv file! "
-                  + f"Please change the permissions on the following file: {results_filename}")
-            return
-        except IsADirectoryError:
-            print(f"Report Generator: results csv file {results_filename} "
-                  + f"or report destination file {results_filename_in_report_path} is a directory. "
-                  + "Please fix and re-run Report Generator.")
-            return
-        except shutil.SameFileError:
-            # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
-            pass
+    # if not os.path.exists(results_filename_in_report_path):
+    #     try:
+    #         shutil.copy2(results_filename, results_filename_in_report_path)
+    #     except PermissionError:
+    #         print("Report Generator does not have permission to access the results csv file! "
+    #               + f"Please change the permissions on the following file: {results_filename}")
+    #         return
+    #     except IsADirectoryError:
+    #         print(f"Report Generator: results csv file {results_filename} "
+    #               + f"or report destination file {results_filename_in_report_path} is a directory. "
+    #               + "Please fix and re-run Report Generator.")
+    #         return
+    #     except shutil.SameFileError:
+    #         # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
+    #         pass
+    
+    # if not os.path.exists(hyperparams_filename_in_report_path):
+    #     try:
+    #         shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
+    #     except PermissionError:
+    #         print("Report Generator does not have permission to access the hyperparameters csv file! "
+    #               + f"Please change the permissions on the following file: {hyperparams_filename}")
+    #         return
+    #     except IsADirectoryError:
+    #         print(f"Report Generator: hyperparameters csv file {hyperparams_filename} "
+    #               + f"or report destination file {hyperparams_filename_in_report_path} is a directory. "
+    #               + "Please fix and re-run Report Generator.")
+    #         return
+    #     except shutil.SameFileError:
+    #         # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
+    #         pass
     
     if not os.path.exists(hyperparams_filename_in_report_path):
         try:
@@ -232,9 +281,7 @@ def generate_report(ctxt):
             pdf.ln(cell_height)
 
             df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
-            # model_dict = config['models'][learning_model]['params']
             df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
-            # model_dict = config['models'][learning_model]['params']
             # model_dict = df.to_dict()
 
             # for key, value in model_dict.items():

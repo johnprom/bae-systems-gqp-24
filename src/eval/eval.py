@@ -220,9 +220,19 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
         model.to('cuda')
         if ctxt.verbose:
             print("Added cuda to the model")
+            
+    config = ctxt.get_pipeline_config()
+    output_top_dir = ctxt.get_output_dir_path()
+    results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
+    os.makedirs(results_path, exist_ok=True)
     
+    run_name = f"val_{degraded_image_size[0]}_{degraded_image_size[1]}"
+    if knee:
+        run_name += "_knee"
+
     # Run evaluation
-    results = model.val(data=data_config_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache())
+    results = model.val(data=data_config_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache(),
+                        save_json=True, save_hybrid=True, project=results_path, name=run_name)
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection

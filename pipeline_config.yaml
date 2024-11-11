@@ -1,7 +1,7 @@
 # Execution flow parameters
-# run_preprocess: true # default false
-# run_train: true # default false
-# run_knee_discovery: true # default false
+run_preprocess: true # default false
+run_train: true # default false
+run_knee_discovery: true # default false
 generate_report: true # default false
 #
 #
@@ -90,7 +90,7 @@ knee_discovery:
 #
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
-  clean_subdir: true # wipes out the reports output_subdir
+  clean_subdir: false # wipes out the reports output_subdir
 #
 #
 # Supported reprocessing methods parameters
