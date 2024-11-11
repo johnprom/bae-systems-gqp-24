@@ -11,6 +11,17 @@ import pandas as pd
 from ultralytics import YOLO
 
 def update_hyperparameters(ctxt, model_params):
+    """
+    Updates the hyperparameters into the configured filename
+
+    Args:
+        ctxt: Context object containing configuration, model details, and utility methods.
+        model_params: Dictionary of parameters used for the YOLO model evaluation
+
+    Returns:
+        None
+    """
+
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_output_dir_path()
     hyper_path = os.path.join(output_top_dir, config['train']['output_subdir'])
