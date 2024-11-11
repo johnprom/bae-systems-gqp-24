@@ -1,4 +1,46 @@
 from util.util import get_class_name_from_id, load_annotations_master, update_data_config_class_count, update_data_config_class_names, write_to_annotations_filtered
+import math
+
+def calculate_average_pixel_area(filtered_features):
+    """
+    Calculate the average pixel per object class in pixels.
+
+    Args:
+        filtered_features (list): List of filtered feature dictionaries containing 'bounds_imcoords' and 'type_id'.
+
+    Returns:
+        dict: Dictionary of average pixel area per class, rounded up to the nearest integer greater than or equal to 1.
+    """
+
+    # initialize an empty dict to store areas by class
+    class_pixel_areas = {}
+
+    # calculate pixel areas for each feature by class
+    for feature in filtered_features:
+        type_id = feature['properties']['type_id']
+        bounds = feature['properties']['bounds_imcoords']
+        x_min, y_min, x_max, y_max = map(int, bounds.split(','))
+        
+        # calculate area (in pixels of bounding box)
+        area = (x_max - x_min + 1) * (y_max - y_min + 1)
+        
+        # append to list for this class ID
+        if type_id not in class_pixel_areas:
+            class_pixel_areas[type_id] = []
+        class_pixel_areas[type_id].append(area)
+
+    # calculate average pixel area per class
+    # round up to nearest int with min val 1
+    class_avg_areas = {}
+    for cls, areas in class_pixel_areas.items():
+        avg_area = math.ceil(sum(areas) / len(areas)) if areas else 0
+        class_avg_areas[cls] = max(avg_area, 1)
+
+    # log dictionary
+    print("Average areas per class in pixels:", class_avg_areas)
+    
+    return class_avg_areas
+
 
 def filter_classes(ctxt, target_class_ids: list[int]):
     """
@@ -46,6 +88,10 @@ def filter_classes(ctxt, target_class_ids: list[int]):
         if feature['properties'].get('type_id') in target_class_ids
     ]
     write_to_annotations_filtered(ctxt, filtered_features)
+
+    # store object class-id to avg pixel area dict in ctxt for use in report generation
+    ctxt.object_sizes = calculate_average_pixel_area(filtered_features)
+
     # map target class ids to class names for YOLO data config
     target_class_names = [get_class_name_from_id(ctxt, id_key) for id_key in target_class_ids]
 
