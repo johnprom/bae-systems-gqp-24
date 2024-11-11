@@ -7,7 +7,27 @@ Created on Tue Oct  1 14:01:23 2024
 """
 import copy
 import os
+import pandas as pd
 from ultralytics import YOLO
+
+def update_hyperparameters(ctxt, model_params):
+    config = ctxt.get_pipeline_config()
+    output_top_dir = ctxt.get_output_dir_path()
+    hyper_path = os.path.join(output_top_dir, config['train']['output_subdir'])
+    if 'train' not in config or 'hyperparams_filename' not in config['train']:
+        hyperparams_filename = os.path.join(hyper_path, 'hyperparams.csv')
+    else:
+        hyperparams_filename = os.path.join(hyper_path, config['train']['hyperparams_filename'])
+
+    os.makedirs(hyper_path, exist_ok=True)
+
+    # Log hyperparameters
+    # df = pd.DataFrame.from_dict(model_params)
+    df = pd.DataFrame(columns=['parameter', 'value'])
+    for key, value in model_params.items():
+        if key != 'data':
+            df.loc[df.shape[0]] = [key, str(value)]
+    df.to_csv(hyperparams_filename, index=False)
 
 def run_finetuning(ctxt):
     """
@@ -50,5 +70,7 @@ def run_finetuning(ctxt):
         print(ft_stats)
     os.makedirs(os.path.dirname(ctxt.final_weights_path), exist_ok=True)
     base_model.save(ctxt.final_weights_path)
+
+    update_hyperparameters(ctxt, model_params)
     
     print("Finished Running Fine-tuning.")

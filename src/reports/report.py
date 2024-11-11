@@ -69,7 +69,9 @@ def generate_report(ctxt):
     reports_path = os.path.join(output_top_dir, config['report']['output_subdir'])
     report_path = os.path.join(reports_path, get_timestr_file_last_mod(results_filename))
     results_filename_in_report_path = os.path.join(report_path, os.path.basename(results_filename))
-    config_filename = ctxt.config_filename
+    hyperparams_path = os.path.join(output_top_dir, config['train']['output_subdir'])
+    hyperparams_filename = os.path.join(hyperparams_path, config['train']['hyperparameters_filename'])
+    hyperparams_filename_in_report_path = os.path.join(report_path, os.path.basename(hyperparams_filename))
 
     if not os.path.exists(results_filename) and not os.path.exists(results_filename_in_report_path):
         print("Report generator could not find results csv file! "
@@ -77,8 +79,8 @@ def generate_report(ctxt):
         return
 
     display_hyperparams = True
-    if not os.path.exists(config_filename):
-        print("Warning: Report generator could not find configuration file. "
+    if not os.path.exists(hyperparams_filename):
+        print("Warning: Report generator could not find hyperparameters file. "
               + "Hyperparameters will not be displayed.")
         display_hyperparams = False
     
@@ -94,6 +96,22 @@ def generate_report(ctxt):
         except IsADirectoryError:
             print(f"Report Generator: results csv file {results_filename} "
                   + f"or report destination file {results_filename_in_report_path} is a directory. "
+                  + "Please fix and re-run Report Generator.")
+            return
+        except shutil.SameFileError:
+            # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
+            pass
+    
+    if not os.path.exists(hyperparams_filename_in_report_path):
+        try:
+            shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
+        except PermissionError:
+            print("Report Generator does not have permission to access the hyperparameters csv file! "
+                  + f"Please change the permissions on the following file: {hyperparams_filename}")
+            return
+        except IsADirectoryError:
+            print(f"Report Generator: hyperparameters csv file {hyperparams_filename} "
+                  + f"or report destination file {hyperparams_filename_in_report_path} is a directory. "
                   + "Please fix and re-run Report Generator.")
             return
         except shutil.SameFileError:
@@ -213,11 +231,16 @@ def generate_report(ctxt):
             pdf.cell(cell_width, cell_height, txt=f"{learning_model}", border=1, align='C')
             pdf.ln(cell_height)
 
-            model_dict = config['models'][learning_model]['params']
+            df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
+            # model_dict = config['models'][learning_model]['params']
+            df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
+            # model_dict = config['models'][learning_model]['params']
+            # model_dict = df.to_dict()
 
-            for key, value in model_dict.items():
-                pdf.cell(cell_width, cell_height, txt=f"{learning_model}: {key}", border=1, align='C')
-                pdf.cell(cell_width, cell_height, txt=f"{value}", border=1, align='C')
+            # for key, value in model_dict.items():
+            for idx, row in df.iterrows():
+                pdf.cell(cell_width, cell_height, txt=f"{learning_model}: {row['parameter']}", border=1, align='C')
+                pdf.cell(cell_width, cell_height, txt=f"{row['value']}", border=1, align='C')
                 pdf.ln(cell_height)
 
             pdf.ln(20)

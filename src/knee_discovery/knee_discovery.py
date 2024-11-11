@@ -123,32 +123,6 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
         
     return num_images, corrupted_counter
 
-def run_eval_on_initial_resolutions(ctxt):
-    """
-    Evaluates the model on the baseline resolution as specified in the pipeline configuration
-    and logs the evaluation results. This function retrieves the baseline image dimensions from 
-    the configured preprocessing method and then runs the evaluation.
-
-    Args:
-        ctxt: The pipeline context object containing the pipeline configuration and relevant paths.
-
-    Behavior:
-        - Retrieves baseline resolution dimensions from the preprocessing configuration.
-        - Calls `run_eval` with the baseline resolution to perform model evaluation.
-        - Note: The `run_eval` function internally logs the results, so additional logging or
-                calls to `update_results()` are not needed here.
-    """
-    config = ctxt.get_pipeline_config()
-    preprocess_method = config['preprocess_method']
-    pp_params = config['preprocess_methods'][preprocess_method]
-    width = pp_params['image_size']
-    height = pp_params['image_size']
-   
-    # Run evaluation on the baseline resolution
-    baseline_dir = ctxt.val_baseline_dir
-    run_eval(ctxt, (width, height), (width, height), baseline_dir, "unknown")
-    # Note: No need to call update_results() here since run_eval() already calls it.
-
 def run_eval_on_degraded_images(ctxt):
     """
     Evaluates the model on a range of degraded image resolutions, specified in the configuration,
@@ -382,10 +356,9 @@ def run_knee_discovery(ctxt):
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
     eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
-    
-    if 'clean_subdir' in config['knee_discovery'] and config['knee_discovery']['clean_subdir']:
-        if os.path.exists(results_path):
-            shutil.rmtree(results_path)
+
+    if os.path.exists(eval_results_filename):
+        os.remove(eval_results_filename)
 
     os.makedirs(results_path, exist_ok=True)
     
