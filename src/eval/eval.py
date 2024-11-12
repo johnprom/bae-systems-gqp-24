@@ -234,7 +234,7 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
 
     # Run evaluation
     results = model.val(data=data_config_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache(),
-                        save_json=True, save_hybrid=True, project=results_path, name=run_name)
+                        save_json=True, project=results_path, name=run_name)
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
