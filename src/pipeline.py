@@ -66,7 +66,7 @@ class Pipeline:
             self.report_names = self.xview_names.copy()
 
         self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
-                             'effective_resolution_height', 'mAP', 'degradation_factor', 'knee']
+                             'effective_resolution_height', 'mAP', 'degradation_factor', 'GSD', 'knee']
         # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
         self.results_cache_df = None
         self.cache_results = False

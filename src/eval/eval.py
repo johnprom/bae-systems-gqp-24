@@ -101,11 +101,12 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
     # for idx, name in enumerate(name_list):
         degradation_factor = calc_degradation_factor(orig_image_size[0], orig_image_size[1],
                                                      degraded_image_size[0], degraded_image_size[1])
+        gsd_per_pixel = config['pixel_size'] / degradation_factor
         # degradation_factor = calc_degradation_factor(orig_image_size, orig_image_size, degraded_image_size, degraded_image_size)
         # rcdf_list = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
         #                            degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
         rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
-                                   degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
+                                   degraded_image_size[1], mAP_list[idx], degradation_factor, gsd_per_pixel, is_knee]
         if ctxt.verbose:
             print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
                   + f"mAP {mAP_list[idx]}, knee {is_knee}")
@@ -155,8 +156,9 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
         
     degraded_width = math.ceil(orig_image_size[0] * degradation_factor)
     degraded_height = math.ceil(orig_image_size[1] * degradation_factor)
+    gsd_per_pixel = config['pixel_size'] / degradation_factor
     rcdf.loc[rcdf.shape[0]] = [name, orig_image_size[0], orig_image_size[1], degraded_width, 
-                               degraded_height, mAP, degradation_factor, True]
+                               degraded_height, mAP, degradation_factor, gsd_per_pixel, True]
     
     # rcdf = rcdf.sort_values(['object_name', 'degradation_factor'])
     
@@ -227,7 +229,7 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     os.makedirs(results_path, exist_ok=True)
     
     run_name = f"val_{degraded_image_size[0]}_{degraded_image_size[1]}"
-    if knee:
+    if isinstance(knee, bool) and knee:
         run_name += "_knee"
 
     # Run evaluation
@@ -236,6 +238,8 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
+    if ctxt.verbose:
+        print(mAP_list)
     
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
     if len(mAP_list) == 0:

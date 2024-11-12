@@ -3,6 +3,7 @@ from fpdf import FPDF
 # import math
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
@@ -23,6 +24,7 @@ header_to_readable = {
     'effective_resolution_height': 'Effective Height',
     'mAP': 'mAP',
     'degradation_factor': '',
+    'GSD': 'GSD',
     'knee': 'Knee'
     }
 
@@ -113,7 +115,7 @@ def generate_report(ctxt):
                 pass
         else:
             try:
-                shutil.copytree(res_filename, res_filename_in_report_path)
+                shutil.copytree(res_filename, res_filename_in_report_path, dirs_exist_ok=True)
             except PermissionError:
                 print(f"Report Generator does not have permission to access {res_filename}!")
                 return
@@ -211,7 +213,13 @@ def generate_report(ctxt):
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
             object_data_IAPC = data_IAPC[data_IAPC['object_name'] == object_name].copy()
+            num_data_points = object_data_IAPC.shape[0]
+            num_xticks = 5
+            skips = num_data_points // num_xticks
             
+            plt.xticks(object_data_IAPC['degradation_factor'][::skips], 
+                       np.round(object_data_IAPC['GSD'][::skips], 2))
+
             plt.plot(object_data_IAPC['degradation_factor'], object_data_IAPC['mAP'], label=f"{object_name} IAP Curve", 
                       color=curve_color[o_i], marker='o', markersize=6, markeredgecolor='black', markerfacecolor=curve_color[o_i])
         
@@ -228,7 +236,7 @@ def generate_report(ctxt):
         legend_elements = [Line2D([0], [0], marker='o', color='w', label='Knees', markerfacecolor=knee_color, markersize=10)]
         
         plt.title("IAP Curves with Knee Points")
-        plt.xlabel("Degraded Resolution Factor")
+        plt.xlabel("GSD per pixel")
         plt.ylabel("Mean Average Precision (mAP)")
         
         plt.legend(# loc='upper left',  
