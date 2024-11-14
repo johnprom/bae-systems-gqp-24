@@ -122,38 +122,6 @@ def generate_report(ctxt):
                 return
         
 
-    # if not os.path.exists(results_filename_in_report_path):
-    #     try:
-    #         shutil.copy2(results_filename, results_filename_in_report_path)
-    #     except PermissionError:
-    #         print("Report Generator does not have permission to access the results csv file! "
-    #               + f"Please change the permissions on the following file: {results_filename}")
-    #         return
-    #     except IsADirectoryError:
-    #         print(f"Report Generator: results csv file {results_filename} "
-    #               + f"or report destination file {results_filename_in_report_path} is a directory. "
-    #               + "Please fix and re-run Report Generator.")
-    #         return
-    #     except shutil.SameFileError:
-    #         # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
-    #         pass
-    
-    # if not os.path.exists(hyperparams_filename_in_report_path):
-    #     try:
-    #         shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
-    #     except PermissionError:
-    #         print("Report Generator does not have permission to access the hyperparameters csv file! "
-    #               + f"Please change the permissions on the following file: {hyperparams_filename}")
-    #         return
-    #     except IsADirectoryError:
-    #         print(f"Report Generator: hyperparameters csv file {hyperparams_filename} "
-    #               + f"or report destination file {hyperparams_filename_in_report_path} is a directory. "
-    #               + "Please fix and re-run Report Generator.")
-    #         return
-    #     except shutil.SameFileError:
-    #         # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
-    #         pass
-    
     if not os.path.exists(hyperparams_filename_in_report_path):
         try:
             shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
@@ -222,8 +190,8 @@ def generate_report(ctxt):
                 num_xticks = min(5, num_data_points)
                 skips = num_data_points // num_xticks
 
-                plt.xticks(object_data_IAPC['degradation_factor'][::skips], 
-                           np.round(object_data_IAPC['GSD'][::skips], 2))
+                plt.xticks(object_data_IAPC['degradation_factor'][skips::skips], 
+                           np.round(object_data_IAPC['GSD'][skips::skips], 2))
 
             for idx, row in object_data_IAPC.iterrows():
                 if row['knee'] == 'unknown':
