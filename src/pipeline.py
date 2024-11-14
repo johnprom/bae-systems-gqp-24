@@ -47,6 +47,7 @@ class Pipeline:
 
         self.train_labels_to_xview = {}
         self.xview_to_train_labels = {}
+        self.object_sizes = {}
         self.target_labels = list(self.config['target_labels'].keys())
         self.xview_names = list(self.config['target_labels'].values())
         for idx, label in enumerate(self.target_labels):
@@ -66,7 +67,7 @@ class Pipeline:
             self.report_names = self.xview_names.copy()
 
         self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
-                             'effective_resolution_height', 'mAP', 'degradation_factor', 'GSD', 'knee']
+                             'effective_resolution_height', 'mAP', 'degradation_factor', 'GSD', 'pixels_on_target', 'knee']
         # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
         self.results_cache_df = None
         self.cache_results = False

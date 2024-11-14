@@ -17,7 +17,7 @@ def calculate_average_pixel_area(filtered_features):
 
     # calculate pixel areas for each feature by class
     for feature in filtered_features:
-        type_id = feature['properties']['type_id']
+        class_name = feature['properties']['class_name']
         bounds = feature['properties']['bounds_imcoords']
         x_min, y_min, x_max, y_max = map(int, bounds.split(','))
         
@@ -25,9 +25,9 @@ def calculate_average_pixel_area(filtered_features):
         area = (x_max - x_min + 1) * (y_max - y_min + 1)
         
         # append to list for this class ID
-        if type_id not in class_pixel_areas:
-            class_pixel_areas[type_id] = []
-        class_pixel_areas[type_id].append(area)
+        if class_name not in class_pixel_areas:
+            class_pixel_areas[class_name] = []
+        class_pixel_areas[class_name].append(area)
 
     # calculate average pixel area per class
     # round up to nearest int with min val 1
@@ -81,6 +81,7 @@ def filter_classes(ctxt, target_class_ids: list[int]):
             'properties': {
                 'bounds_imcoords': feature['properties']['bounds_imcoords'],
                 'type_id': target_class_ids.index(feature['properties'].get('type_id')),
+                'class_name': get_class_name_from_id(ctxt, feature['properties']['type_id']),
                 'image_id': feature['properties']['image_id']
             }
         }

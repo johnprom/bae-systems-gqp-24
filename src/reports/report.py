@@ -25,6 +25,7 @@ header_to_readable = {
     'mAP': 'mAP',
     'degradation_factor': '',
     'GSD': 'GSD',
+    'pixels_on_target': 'Pixels on Target',
     'knee': 'Knee'
     }
 
@@ -214,9 +215,15 @@ def generate_report(ctxt):
         for o_i, object_name in enumerate(curve_array):
             object_data_IAPC = data_IAPC[data_IAPC['object_name'] == object_name].copy()
             num_data_points = object_data_IAPC.shape[0]
-            
             plt.plot(object_data_IAPC['degradation_factor'], object_data_IAPC['mAP'], label=f"{object_name} IAP Curve", 
                       color=curve_color[o_i], marker='o', markersize=6, markeredgecolor='black', markerfacecolor=curve_color[o_i])
+
+            if num_data_points > 1:
+                num_xticks = min(5, num_data_points)
+                skips = num_data_points // num_xticks
+
+                plt.xticks(object_data_IAPC['degradation_factor'][::skips], 
+                           np.round(object_data_IAPC['GSD'][::skips], 2))
         
             if num_data_points > 1:
                 num_xticks = min(5, num_data_points)
