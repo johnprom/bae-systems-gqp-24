@@ -224,13 +224,6 @@ def generate_report(ctxt):
 
                 plt.xticks(object_data_IAPC['degradation_factor'][::skips], 
                            np.round(object_data_IAPC['GSD'][::skips], 2))
-        
-            if num_data_points > 1:
-                num_xticks = min(5, num_data_points)
-                skips = num_data_points // num_xticks
-
-                plt.xticks(object_data_IAPC['degradation_factor'][::skips], 
-                           np.round(object_data_IAPC['GSD'][::skips], 2))
 
             for idx, row in object_data_IAPC.iterrows():
                 if row['knee'] == 'unknown':
