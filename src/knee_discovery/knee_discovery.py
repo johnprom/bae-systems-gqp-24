@@ -216,8 +216,8 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
 
 def calculate_knee(ctxt, class_name, results_class_df):
     """
-    Calculates the "knee" point in the IAPC curve using the double derivative method with smoothing,
-    ignoring the first 20% and the last 20% of data points.
+    Calculates the "knee" point in the IAPC curve using the piecewise linear fit method
+    with spline interpolation to smooth the data.
 
     Args:
         ctxt: The pipeline context object containing configuration and verbosity settings.
@@ -233,17 +233,17 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
     Behavior:
         - Converts resolution columns to floating-point values and calculates degradation factors.
-        - Filters out mAP values below a threshold (0.01) to focus on meaningful data points.
-        - Ignores the first 20% and the last 20% of data points while calculating the knee.
-        - Applies smoothing to the mAP values.
-        - Calculates the first and second derivatives.
-        - Identifies the knee point as the point with maximum absolute second derivative.
+        - Filters out mAP values below a threshold to focus on meaningful data points.
+        - Applies spline interpolation to smooth the data.
+        - Uses piecewise linear fitting to identify the knee point.
         - Logs knee point if verbosity is enabled in the context.
         - Calls `update_knee_results` to store the knee point in the context.
 
     """
     import numpy as np
     import pandas as pd
+    from pwlf import PiecewiseLinFit
+    from scipy.interpolate import make_interp_spline
 
     # Get degradation factors and mAP values
     orig_res_w = results_class_df['original_resolution_width'].astype(float)
@@ -252,19 +252,20 @@ def calculate_knee(ctxt, class_name, results_class_df):
     eff_res_h = results_class_df['effective_resolution_height'].astype(float)
     mAP_values_series = results_class_df['mAP']
     degradation_factor_series = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
-    
+
     degradation_factor_list = degradation_factor_series.to_list()
     mAP_values = mAP_values_series.to_list()
     width_list = orig_res_w.to_list()
     height_list = orig_res_h.to_list()
 
     # If all mAP are zero, return empty lists
-    if all(mAP <= 0.01 for mAP in mAP_values):
+    threshold = 0.01
+    if all(mAP <= threshold for mAP in mAP_values):
         return [], []
-    
-    # Filter out mAP values <= 0.01
-    filtered_data = [(d, m, w, h) for d, m, w, h in zip(degradation_factor_list, mAP_values, width_list, height_list) if m > 0.01]
-    if len(filtered_data) == 0:
+
+    # Filter out mAP values <= threshold
+    filtered_data = [(d, m, w, h) for d, m, w, h in zip(degradation_factor_list, mAP_values, width_list, height_list) if m > threshold]
+    if len(filtered_data) < 2:
         return [], []
     x_list, y_list, w_list, h_list = zip(*filtered_data)
 
@@ -272,55 +273,48 @@ def calculate_knee(ctxt, class_name, results_class_df):
     sorted_data = sorted(zip(x_list, y_list, w_list, h_list), key=lambda pair: pair[0])
     x_sorted, y_sorted, w_sorted, h_sorted = zip(*sorted_data)
 
-    # Ignore first 20% and last 20% of data
-    N = len(x_sorted)
-    start_index = int(0.2 * N)
-    end_index = N - int(0.2 * N)
-    if start_index >= end_index:
-        # Not enough data points after slicing
+    # Convert lists to numpy arrays for interpolation
+    x_array = np.array(x_sorted)
+    y_array = np.array(y_sorted)
+
+    # Apply spline interpolation to smooth the data
+    try:
+        num_interpolation_points = 100  # You can adjust this number as needed
+        x_interp = np.linspace(x_array.min(), x_array.max(), num=num_interpolation_points)
+        spline = make_interp_spline(x_array, y_array, k=3)  # Cubic spline
+        y_interp = spline(x_interp)
+    except Exception as e:
+        if ctxt.verbose:
+            print(f"Spline interpolation failed for class {class_name}: {e}")
         return [], []
-    x_used = x_sorted[start_index:end_index]
-    y_used = y_sorted[start_index:end_index]
-    w_used = w_sorted[start_index:end_index]
-    h_used = h_sorted[start_index:end_index]
 
-    if len(x_used) < 3:
-        # Not enough data points to calculate derivatives
+    # Apply piecewise linear fit with two segments on interpolated data
+    try:
+        pwlf = PiecewiseLinFit(x_interp, y_interp)
+        breaks = pwlf.fit(2)
+        knee_x = breaks[1]
+        knee_y = pwlf.predict([knee_x])[0]
+
+        # Find the index of the knee point in the interpolated data
+        knee_index = np.argmin(np.abs(x_interp - knee_x))
+
+        # Map back to the closest original resolution for logging and updating results
+        original_index = np.argmin(np.abs(x_array - knee_x))
+        w_knee = w_sorted[original_index]
+        h_knee = h_sorted[original_index]
+
+        if ctxt.verbose:
+            print(f"Knee found at degradation factor {knee_x} with mAP {knee_y} for class {class_name}")
+
+        # Update the knee results
+        update_knee_results(ctxt, class_name, (w_knee, h_knee), knee_x, knee_y)
+
+        return [knee_x], [knee_y]
+
+    except Exception as e:
+        if ctxt.verbose:
+            print(f"Piecewise linear fit failed for class {class_name}: {e}")
         return [], []
-
-    # Apply smoothing to y_used
-    window_size = 5
-    y_series = pd.Series(y_used)
-    y_smoothed = y_series.rolling(window=window_size, center=True, min_periods=1).mean()
-
-    # Convert x_used to numpy array
-    x_array = np.array(x_used)
-    y_smoothed_array = y_smoothed.to_numpy()
-
-    # Compute first derivative
-    dy_dx = np.gradient(y_smoothed_array, x_array)
-    # Compute second derivative
-    d2y_dx2 = np.gradient(dy_dx, x_array)
-
-    # Find the index where the absolute value of second derivative is maximized
-    knee_index_relative = np.argmax(np.abs(d2y_dx2))
-    # Get the absolute index in the original x_sorted array
-    knee_index = start_index + knee_index_relative
-
-    x_knee = x_sorted[knee_index]
-    y_knee = y_sorted[knee_index]
-    w_knee = w_sorted[knee_index]
-    h_knee = h_sorted[knee_index]
-
-    if ctxt.verbose:
-        print("Knee found at:")
-        print(f"  Degradation factor: {x_knee}")
-        print(f"  mAP: {y_knee}")
-
-    # Update the knee results
-    update_knee_results(ctxt, class_name, (w_knee, h_knee), x_knee, y_knee)
-
-    return [x_knee], [y_knee]
 
         
 def run_knee_discovery(ctxt):
