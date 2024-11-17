@@ -164,7 +164,7 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     original_gsd = config['pixel_size']
     gsd_per_pixel = original_gsd / degradation_factor
 
-    class_pixel_area = ctxt.object_sizes.get(name_list[idx], 1)
+    class_pixel_area = ctxt.object_sizes.get(name, 1)
     pixels_on_target = math.ceil((original_gsd ** 2) * class_pixel_area / (gsd_per_pixel ** 2))
 
     rcdf.loc[rcdf.shape[0]] = [name, orig_image_size[0], orig_image_size[1], degraded_width, 
