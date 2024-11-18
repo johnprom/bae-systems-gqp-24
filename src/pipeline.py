@@ -85,6 +85,11 @@ class Pipeline:
             self.use_cuda = True
         else:
             self.use_cuda = False
+
+        if 'report_filename' in self.config['report']:
+            self.report_filename = self.config['report']['report_filename']
+        else:
+            self.report_filename = 'generated_report.pdf'
         
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
@@ -309,6 +314,8 @@ class Pipeline:
             params_str += str(model_params[key])
 
         params_hash = hash(params_str)
+        if self.verbose:
+            print(f"hash for params is {params_hash}")
         self.final_weights_path = os.path.join(
             self.get_top_dir(), self.config['trained_models_subdir'], 
             trained_model_filename_template.format(hashed_params=str(params_hash)))

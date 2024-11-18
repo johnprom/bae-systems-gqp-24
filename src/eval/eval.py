@@ -224,6 +224,7 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     data_config = load_pipeline_config(data_config_path)
     
     if ctxt.final_weights_path is None or ctxt.final_weights_path == "" or not os.path.exists(ctxt.final_weights_path):
+        print(f"Couldn't find final weights path {ctxt.final_weights_path}, using pretrained weights", flush=True)
         model_to_use = ctxt.get_model_name()
     else:
         model_to_use = ctxt.final_weights_path

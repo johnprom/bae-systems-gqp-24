@@ -24,7 +24,7 @@ header_to_readable = {
     'effective_resolution_height': 'Effective Height',
     'mAP': 'mAP',
     'degradation_factor': '',
-    'GSD': 'GSD',
+    'GSD': 'GSD (meters)',
     'pixels_on_target': 'Pixels on Target',
     'knee': 'Knee'
     }
@@ -138,7 +138,7 @@ def generate_report(ctxt):
             # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
             pass
     
-    data_IAPC = pd.read_csv(results_filename_in_report_path, index_col=False)
+    data_IRPC = pd.read_csv(results_filename_in_report_path, index_col=False)
     if 'display_labels' in config['report']:
         report_labels = config['report']['display_labels']
         for label in report_labels:
@@ -147,16 +147,16 @@ def generate_report(ctxt):
                       + "in configuration file.")
         report_labels_filter = [label for label in report_labels if label in config['target_labels'].values()]
         filter_pattern = '|'.join(report_labels_filter)
-        data_IAPC = data_IAPC[data_IAPC['object_name'].str.contains(filter_pattern, case=False, na=False)]\
+        data_IRPC = data_IRPC[data_IRPC['object_name'].str.contains(filter_pattern, case=False, na=False)]\
             .reset_index(drop=True).copy()
-    data_IAPC['degradation_factor'] = calc_degradation_factor(data_IAPC['original_resolution_width'],
-                                                              data_IAPC['original_resolution_height'],
-                                                              data_IAPC['effective_resolution_width'],
-                                                              data_IAPC['effective_resolution_height'])
-    data_IAPC['median_mAP'] = data_IAPC.groupby('object_name')['mAP'].transform('median')
-    sorted_objects = data_IAPC[['object_name', 'median_mAP']]\
+    data_IRPC['degradation_factor'] = calc_degradation_factor(data_IRPC['original_resolution_width'],
+                                                              data_IRPC['original_resolution_height'],
+                                                              data_IRPC['effective_resolution_width'],
+                                                              data_IRPC['effective_resolution_height'])
+    data_IRPC['median_mAP'] = data_IRPC.groupby('object_name')['mAP'].transform('median')
+    sorted_objects = data_IRPC[['object_name', 'median_mAP']]\
         .drop_duplicates().sort_values(by='median_mAP', ascending=False)['object_name']
-    data_IAPC = data_IAPC.drop('median_mAP', axis=1)
+    data_IRPC = data_IRPC.drop('median_mAP', axis=1)
     
     num_curves_per_graph = 5
     curve_color = ['blue', 'green', 'orange', 'red', 'purple']
@@ -181,23 +181,23 @@ def generate_report(ctxt):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
-            object_data_IAPC = data_IAPC[data_IAPC['object_name'] == object_name].copy()
-            num_data_points = object_data_IAPC.shape[0]
-            plt.plot(object_data_IAPC['degradation_factor'], object_data_IAPC['mAP'], label=f"{object_name} IAP Curve", 
+            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
+            num_data_points = object_data_IRPC.shape[0]
+            plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve", 
                       color=curve_color[o_i], marker='o', markersize=6, markeredgecolor='black', markerfacecolor=curve_color[o_i])
 
             if num_data_points > 1:
                 num_xticks = min(5, num_data_points)
                 skips = num_data_points // num_xticks
 
-                plt.xticks(object_data_IAPC['degradation_factor'][skips::skips], 
-                           np.round(object_data_IAPC['GSD'][skips::skips], 2))
+                plt.xticks(object_data_IRPC['degradation_factor'][skips::skips],
+                           np.round(object_data_IRPC['GSD'][skips::skips], 2))
 
-            for idx, row in object_data_IAPC.iterrows():
+            for idx, row in object_data_IRPC.iterrows():
                 if row['knee'] == 'unknown':
-                    object_data_IAPC.at[idx, 'knee'] = False
+                    object_data_IRPC.at[idx, 'knee'] = False
 
-            knee_points = object_data_IAPC[object_data_IAPC['knee']]
+            knee_points = object_data_IRPC[object_data_IRPC['knee']]
             if not knee_points.empty:
                 knee_degredation_factor = knee_points['degradation_factor']
                 knee_map = knee_points['mAP']
@@ -205,8 +205,8 @@ def generate_report(ctxt):
     
         legend_elements = [Line2D([0], [0], marker='o', color='w', label='Knees', markerfacecolor=knee_color, markersize=10)]
         
-        plt.title("IAP Curves with Knee Points")
-        plt.xlabel("GSD per pixel")
+        plt.title("IRP Curves with Knee Points")
+        plt.xlabel("Ground Sample Distance per pixel (meters)")
         plt.ylabel("Mean Average Precision (mAP)")
         
         plt.legend(# loc='upper left',  
@@ -214,16 +214,16 @@ def generate_report(ctxt):
         
         
         plt.grid(True)
-        plt.savefig(os.path.join(report_path, f'iap_curves_{g_i}.pdf'))
+        plt.savefig(os.path.join(report_path, f'irp_curves_{g_i}.pdf'))
         plt.close()
         
         pdf = FPDF()
 
         pdf.add_page()
         pdf.set_font("Times", size=12) # Times Roman
-        pdf.cell(200, 10, txt="IAP Curve Analysis", ln=True, align='C')
+        pdf.cell(200, 10, txt="IRP Curve Analysis", ln=True, align='C')
         pdf.ln(10)
-        txt = (f"The plot represents {num_curves} IAP curve(s). Each curve corresponds to a specific object detection. "
+        txt = (f"The plot represents {num_curves} IRP curve(s). Each curve corresponds to a specific object detection. "
                 + "The x-axis shows the degraded resolution factor, by which the original resolution was reduced and then blown "
                 + "back up, effectively degrading the image quality. The y-axis shows the mean average aprecision (mAP) of the "
                 + "model's performance. "
@@ -270,28 +270,36 @@ def generate_report(ctxt):
 
             pdf.ln(20)
 
-        cell_height = 10
+        page_units_used = 0
+        cell_height = 6
+        first_page = True
         for i, object_name in enumerate(curve_array):
-            if i % 2 == 0:
+            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
+            num_lines = object_data_IRPC.shape[0] + 9
+            page_units_used += (cell_height * num_lines)
+            if page_units_used >= 250 or first_page:
                 pdf.add_page()
-            object_data_IAPC = data_IAPC[data_IAPC['object_name'] == object_name].copy()
+                page_units_used = (cell_height * num_lines)
+            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
             txt = f"Selected data for detection of {object_name}"
             pdf.ln(20)
             pdf.cell(200, 10, txt=txt, ln=True, align='C')
-            pdf.ln(10)
-            for cell_header in object_data_IAPC:
+            pdf.ln(4)
+            for cell_header in object_data_IRPC:
                 this_header = header_to_readable[cell_header]
                 if cell_header == 'mAP':
-                    cell_width = 18
+                    cell_width = 15
                 elif cell_header == 'knee':
                     cell_width = 21
+                elif cell_header == 'GSD':
+                    cell_width = 24
                 else:
-                    cell_width = 3*len(this_header)
+                    cell_width = 2*len(this_header)
                 if this_header != '':
                     pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C')
             pdf.ln(cell_height)
-            for idx, row in object_data_IAPC.iterrows():
-                for cell_header in object_data_IAPC:
+            for idx, row in object_data_IRPC.iterrows():
+                for cell_header in object_data_IRPC:
                     this_header = header_to_readable[cell_header]
                     if this_header == '':
                         continue
@@ -300,25 +308,46 @@ def generate_report(ctxt):
                         cell_width = 21
                     elif cell_header == 'mAP':
                         this_valuestr = f"{round(row['mAP'], 4)}"
-                        cell_width = 18
+                        cell_width = 15
+                    elif cell_header == 'GSD':
+                        this_valuestr = f"{round(row['GSD'], 3)}"
+                        cell_width = 24
                     else:
                         this_valuestr = f"{row[cell_header]}"
-                        cell_width = 3*len(this_header)
+                        cell_width = 2*len(this_header)
                     pdf.cell(cell_width, cell_height, txt=this_valuestr, border=1, align='C')
                 # Move to the next line after each row
                 pdf.ln(cell_height)
-        pdf.output(os.path.join(report_path, f'iap_analysis_{g_i}.pdf'))
+            txt = "Legend:"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    Width, Height: width and height of the image"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    Effective Width, Effective Height: width and height the image was degraded to "
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "                                                             prior to resizing to the original height"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    mAP: mean average precision of the bounding boxes for the object class"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    GSP (meters): the size (sample) of one dimension of a pixel on the ground"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    Pixels on Target: the number of pixels that the object occupies"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            txt = "    Knee: True if the data point is a knee, False if not"
+            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            first_page = False
+        pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
     
     merger = PdfMerger()
     for i in range(num_graphs):
-        merger.append(os.path.join(report_path, f'iap_curves_{i}.pdf'))
-        merger.append(os.path.join(report_path, f'iap_analysis_{i}.pdf'))
-    
-    full_report_filename = os.path.join(report_path, 'generated_report.pdf')
-    merger.write(full_report_filename)
+        merger.append(os.path.join(report_path, f'irp_curves_{i}.pdf'))
+        merger.append(os.path.join(report_path, f'irp_analysis_{i}.pdf'))
+        os.remove(os.path.join(report_path, f'irp_curves_{i}.pdf'))
+        os.remove(os.path.join(report_path, f'irp_analysis_{i}.pdf'))
+
+    report_filename = os.path.join(report_path, ctxt.report_filename)
+    merger.write(report_filename)
     merger.close()
     
-    
-    print(f"Full report generated: {full_report_filename}")
+    print(f"Report generated: {ctxt.report_filename}")
 
 
