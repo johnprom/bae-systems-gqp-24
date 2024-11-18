@@ -334,7 +334,8 @@ def run_knee_discovery(ctxt):
             - If a binary search algorithm is specified, it refines the knee point by iterating over nearby 
               degradation factors until convergence is achieved within a specified tolerance or a maximum 
               number of iterations.
-            - Uses `KneeLocator` to identify knee points and logs details if verbosity is enabled.
+            - Uses piecewise linear fitting to identify knee points and logs details if verbosity is enabled.
+            - Calls `update_knee_results` to store the knee point in the context.
         - Updates and saves the final knee discovery results to the specified output file.
 
     Log Output:
@@ -368,7 +369,6 @@ def run_knee_discovery(ctxt):
         else: 
             print(f"Knee discovery: {eval_results_filename} not found!")
             return
-        # results = results_df.to_dict('records')
 
     ## Ensure degradation_factor is calculated
     if 'degradation_factor' not in results_df.columns:
@@ -378,9 +378,11 @@ def run_knee_discovery(ctxt):
         eff_res_h = results_df['effective_resolution_height'].astype(float)
         results_df['degradation_factor'] = calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h)
 
-    # Ensure 'knee' column exists
+    # Ensure 'knee' column exists and initialize it to False
     if 'knee' not in results_df.columns:
         results_df['knee'] = False
+    else:
+        results_df['knee'] = False  # Initialize once before the loop
 
     class_names = results_df['object_name'].unique()
 
@@ -389,7 +391,8 @@ def run_knee_discovery(ctxt):
     mAP_tolerance = 1e-3      # Tolerance for mAP change convergence
     max_iterations = 10       # Maximum number of iterations to prevent excessive computations
 
-    results_df['knee'] = False
+    # The 'knee' column is initialized outside the loop to avoid overwriting
+
     for class_name in class_names:
         results_class_df = results_df[results_df['object_name'] == class_name].copy()
         x_list, y_list = calculate_knee(ctxt, class_name, results_class_df)
@@ -529,9 +532,8 @@ def run_knee_discovery(ctxt):
                     new_knee_degradation_factor = x_list[0]
                 else:
                     new_knee_degradation_factor = None
-                    
-
-            # Mark the knee point
+                        
+            # Mark the knee point for the current class only
             results_df.loc[results_df['object_name'] == class_name, 'knee'] = False
             if new_knee_degradation_factor is not None:
                 df = results_class_df[np.isclose(results_class_df['degradation_factor'], new_knee_degradation_factor, atol=1e-5)]
@@ -540,14 +542,14 @@ def run_knee_discovery(ctxt):
                 if ctxt.verbose:
                     print(f"Knee discovered at degradation factor {new_knee_degradation_factor} for {class_name}")
 
-                # Plot the IAPC curve for the class
+                # Plot the IAPC curve for the class (optional)
                 # plot_iapc_curve(results_class_df, class_name)
             elif ctxt.verbose:
                 print(f"No knee found for class {class_name}")
 
-        else: # knee algorithm not specified, so none
-
-            # Mark the knee point
+        else:  # Knee algorithm not specified
+            # Mark the knee point for the current class only
+            results_df.loc[results_df['object_name'] == class_name, 'knee'] = False
             if knee_degradation_factor is not None:
                 df = results_class_df[np.isclose(results_class_df['degradation_factor'], knee_degradation_factor, atol=1e-5)]
                 results_df.loc[df.index, 'knee'] = True
@@ -555,7 +557,7 @@ def run_knee_discovery(ctxt):
                 if ctxt.verbose:
                     print(f"Knee discovered at degradation factor {knee_degradation_factor} for {class_name}")
 
-                # Plot the IAPC curve for the class
+                # Plot the IAPC curve for the class (optional)
                 # plot_iapc_curve(results_class_df, class_name)
             elif ctxt.verbose:
                 print(f"No knee found for class {class_name}")
