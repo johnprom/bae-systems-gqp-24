@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.9
+  - python=3.12
   - pip
   - pytorch
   - torchvision
@@ -14,9 +14,11 @@ dependencies:
   - opencv
   - matplotlib
   - pypdf2
+  - scipy
   - pip:
       - ultralytics  # YOLOv8 package
       - timm  # Swin Transformer (in the timm library)
       - geojson
       - fpdf
       - kneed
+      - pwlf
