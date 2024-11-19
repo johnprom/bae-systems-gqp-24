@@ -182,6 +182,7 @@ def generate_report(ctxt):
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
             object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
+            object_data_IRPC = object_data_IRPC.sort_values('degradation_factor').reset_index(drop=True)
             num_data_points = object_data_IRPC.shape[0]
             plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve", 
                       color=curve_color[o_i], marker='o', markersize=6, markeredgecolor='black', markerfacecolor=curve_color[o_i])
@@ -280,7 +281,7 @@ def generate_report(ctxt):
             if page_units_used >= 250 or first_page:
                 pdf.add_page()
                 page_units_used = (cell_height * num_lines)
-            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
+            object_data_IRPC = object_data_IRPC.sort_values('degradation_factor').reset_index(drop=True)
             txt = f"Selected data for detection of {object_name}"
             pdf.ln(20)
             pdf.cell(200, 10, txt=txt, ln=True, align='C')
@@ -332,7 +333,7 @@ def generate_report(ctxt):
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             txt = "    Pixels on Target: the number of pixels that the object occupies"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
-            txt = "    Knee: True if the data point is a knee, False if not"
+            txt = "    Knee: Yes if the data point is a knee, No if not"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             first_page = False
         pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
