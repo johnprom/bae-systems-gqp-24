@@ -1,0 +1,182 @@
+## Execution flow parameters
+# run_preprocess: true # default false
+# run_train: true # default false
+# run_knee_discovery: true # default false
+generate_report: true # default false
+#
+#
+# Global parameters
+#
+# top_dir: "/home/dcfox1/git/bae-systems-gqp-24" # top-level directory, can be full path, defaults to ../
+# input_dir: "/home/dcfox1/pipeline_input" # input directory, can be full path, defaults to top_dir
+# output_dir: "/home/dcfox1/pipeline_output" # output directory, can be full path, defaults to <top_dir>/<output_subdir>
+#
+# run_clean: true # default false, deletes the output directory
+#
+#data_config_filename: "/Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/data_config.yaml"
+data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
+input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from input_dir, CHANGED: used to be subdir from top_dir
+#
+#
+interim_images_subdir: "interim" # DEPRECATED, moved to preprocess, only used if preprocess:interim_subdir not defined
+#
+input_images_labels_filename: "xview_dataset_raw/xView_train.geojson" # REQUIRED inside input_dir
+# input_images_labels_filename: "xView_train.geojson" # intended to now be inside input_dir and not xview_dataset_raw
+# CHANGED: used to be subdir from top_dir
+#
+input_class_labels_filename: "xview_dataset_raw/xview_class_labels.json" # REQUIRED inside input_dir
+# input_class_labels_filename: "xview_class_labels.json" # intended to now be inside input_dir and not xview_dataset_raw
+# CHANGED: used to be subdir from top_dir
+#
+output_subdir: "output" # CHANGED: DEPRECATED: subdir from top_dir, only used if output_dir not defined
+model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
+use_cuda: true # Instructs all modules to use CUDA, default false
+trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, subdir from top_dir
+#
+pixel_size: 0.3 # in meters
+
+target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
+   11: "Fixed-wing Aircraft"
+   12: "Small Aircraft"
+   13: "Cargo Plane"
+   15: "Helicopter"
+   17: "Passenger Vehicle"
+   18: "Small Car"
+   19: "Bus"
+   20: "Pickup Truck"
+   21: "Utility Truck"
+   23: "Truck"
+   24: "Cargo Truck"
+   25: "Truck w/Box"
+   26: "Truck Tractor"
+   27: "Trailer"
+   28: "Truck w/Flatbed"
+   29: "Truck w/Liquid"
+   32: "Crane Truck"
+   33: "Railway Vehicle"
+   34: "Passenger Car"
+   35: "Cargo Car"
+   36: "Flat Car"
+   37: "Tank car"
+   38: "Locomotive"
+   40: "Maritime Vessel"
+   41: "Motorboat"
+   42: "Sailboat"
+   44: "Tugboat"
+   45: "Barge"
+   47: "Fishing Vessel"
+   49: "Ferry"
+   50: "Yacht"
+   51: "Container Ship"
+   52: "Oil Tanker"
+   53: "Engineering Vehicle"
+   54: "Straddle Carrier"
+   60: "Dump Truck"
+   61: "Haul Truck"
+   62: "Scraper/Tractor"
+   63: "Front loader/Bulldozer"
+   64: "Excavator"
+   65: "Cement Mixer"
+   66: "Ground Grader"   
+
+# #
+# eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
+# only "detection" is supporeted at this time
+#
+preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+# Either "tiling" or "padding", reflected by the options in preprocess_methods below
+#
+# Module-specific parameters
+preprocess:
+  output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
+  #  interim_subdir: "preprocessed_datasets/interim" # REQUUIRED FOR PREPROCESSING, subdir from top_dir
+  filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preoprocess:output_subdir
+  clean_subdir: true # wipes out the preprocess output_subdir, default false
+  train_split: 0.8 # REQUIRED FOR PREPROCESSING
+train:
+  # clean_subdir: true # Code needs to be added for this
+  #
+  output_subdir: "results" # REQUIRED FOR TRAIN AND GENERATE_REPORT, subdir for top_dir/<global output_subdir>
+  hyperparameters_filename: "hyperparams.csv" # Filename to store the hyperparameters final training, default is "hyperparams.csv"
+  # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in 
+  # knee discovery
+knee_discovery:
+  output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
+  # clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
+  cache_results: true # Results are cached in memory to improve performance, default false
+  use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
+  # ONLY used if knee_discovery is being run without preprocessing or training
+  eval_results_filename: "iapc_results.csv" # REQUIRED the accumulative results file, must be a csv
+  clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
+  # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
+  # Defines the initial search grid for degrading and inference. Default is false
+  #
+  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
+  # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
+  # if enabled_feeback is true, then this range is just the initial search
+  # in enabled_feedback is false, then this range of values are the only ones searched
+  #
+  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
+  # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
+  # example of range to be searched from above given a 640x640 original resolution
+  # again, note that 640x640 would always be searched regardless
+  # search_algorithm: 'binary'
+#
+report:
+  output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
+  clean_subdir: false # wipes out the reports output_subdir
+  # report_filename: 'generated_report.pdf'
+#
+#
+# Supported reprocessing methods parameters
+preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be specified and MUST match process_method: keyword above
+  tiling: # User-specified method name (can be any string)
+    # image_size: [640, 640] # REQUIRED FOR TILING METHOD, REQUIRED to be square
+    image_size: 640 # REQUIRED FOR TILING METHOD, REQUIRED to be square, TODO: change the code for this
+    stride: 100 # REQUIRED FOR TILING METHOD
+    #
+    # these following directories are subdir from preprocess:output_dir
+    train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+    train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+    # REQUIRED FOR TILING METHOD
+    #
+    val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+    # REQUIRED FOR TILING METHOD
+    #
+    output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
+    # REQUIRED FOR TILING METHOD
+    #
+  padding:  # User-specified method name (can be any string)
+    padsize: "max_square" # size of padding in (width, height) or "max_square" which is the maximum square value of the dataset
+    # default is "max_square", currently only "max_square" required, so this parameter is never referenced
+    #
+    # image_size: [640, 640] # REQUIRED FOR PADDING METHOD
+    image_size: 640 # REQUIRED FOR PADDING METHOD
+    #
+    # these following directories are subdir from preprocess:output_dir
+    train_baseline_subdir: "baseline/train/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
+    val_baseline_subdir: "baseline/val/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
+    train_degraded_subdir: "degraded/train/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+    # REQUIRED FOR PADDING METHOD
+    #
+    val_degraded_subdir: "degraded/val/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+    # REQUIRED FOR PADDING METHOD
+#
+models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be specified and MUST match model: keyword above
+  yolov8m: # User-specified model name (can be anything)
+    name: 'yolov8m' # (must start with 'yolo' if in the YOLO family, and this is the only family supported)
+    pretrained: # Specifies use of a pretrained model
+      library: "ultralytics" # not used, here for reference
+      trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
+    trained_model_filename: "yolov8m/model_{hashed_params}.pt"
+    # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
+    params:
+      # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
+      imgsz: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
+      # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
+      # That is, preprocess_methods:<method>:image_size
+      epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+      batch: 16
+      freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
