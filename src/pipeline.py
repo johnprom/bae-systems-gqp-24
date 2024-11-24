@@ -10,7 +10,7 @@ import torch
 from knee_discovery.knee_discovery import run_knee_discovery
 from preprocessing.preprocessing import run_preprocessing
 # from reports.reports import generate_report
-from train.train import run_hyperparameter_tuning
+from train.train import run_finetuning
 from util.util import load_pipeline_config
 from reports.report import generate_report
 # import yaml
@@ -387,7 +387,7 @@ class Pipeline:
         start_tr = time.time()
         print(f"preprocessing duration {start_tr - start_pp} seconds")
         if "run_train" in pipeline_config and pipeline_config["run_train"]:
-            run_hyperparameter_tuning(self)
+            run_finetuning(self)
     
         start_kd = time.time()
         print(f"training duration {start_kd - start_tr} seconds")
