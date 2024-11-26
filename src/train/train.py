@@ -7,9 +7,57 @@ Created on Tue Oct  1 14:01:23 2024
 """
 
 import os
+import pandas as pd
+import random
+import shutil
+import math
+
 from ultralytics import YOLO
 from itertools import product
-import pandas as pd
+from sklearn.model_selection import ParameterSampler
+from util.util import update_data_config_train_path, update_data_config_val_path
+
+def train_val_split(ctxt):
+    """
+    """
+    config = ctxt.get_pipeline_config()
+    train_split = 0.80 # 0.0 to 1.0
+    # input_images_dir = os.path.join(config['top_dir'], config['input_images_subdir'])
+    image_ext = ['.tif', '.tiff', '.png', '.gif', '.jpg', '.jpeg']
+
+    interim_images_list = [x for x in os.listdir(ctxt.train_baseline_dir) if x[-4:] in image_ext or x[-5:] in image_ext]
+
+    random.seed(43)
+    num_train = math.ceil(len(interim_images_list) * train_split)
+    
+    # Split this list into a random train list and a random val list 
+    ctxt.train_hyperparameter_images_list = random.sample(interim_images_list, num_train) # already initialized to []
+    ctxt.val_hyperparameter_images_list = [x for x in interim_images_list if x not in ctxt.train_hyperparameter_images_list] # already initialized to []
+    
+    ctxt.train_hyperparameter_labels_list = [(x.split('.')[-2] +'.txt') for x in ctxt.train_hyperparameter_images_list]
+    ctxt.val_hyperparameter_labels_list = [(x.split('.')[-2] +'.txt') for x in ctxt.val_hyperparameter_images_list]
+    
+    for filename in ctxt.train_hyperparameter_images_list:
+        if ctxt.verbose:
+            print(f"copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
+        shutil.copy2(os.path.join(ctxt.train_baseline_dir, filename), ctxt.train_hyperparameter_dir)
+    for filename in ctxt.val_hyperparameter_images_list:
+        if ctxt.verbose:
+            print(f"copying file {filename} into directory (ctxt.val_hyperparameter_dir")
+        shutil.copy2(os.path.join(ctxt.train_baseline_dir, filename), ctxt.val_hyperparameter_dir)
+
+    for filename in ctxt.train_hyperparameter_labels_list:
+        full_path = os.path.join(ctxt.train_baseline_dir, filename)
+        if os.path.exists(full_path):
+            if ctxt.verbose:
+                print(f"copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
+            shutil.copy2(full_path, ctxt.train_hyperparameter_dir)
+    for filename in ctxt.val_hyperparameter_labels_list:
+        full_path = os.path.join(ctxt.train_baseline_dir, filename)
+        if os.path.exists(full_path):
+            if ctxt.verbose:
+                print(f"copying file {filename} into directory {ctxt.val_hyperparameter_dir}")
+            shutil.copy2(full_path, ctxt.val_hyperparameter_dir)
 
 def update_hyperparameters(ctxt, model_params):
     """
@@ -24,8 +72,9 @@ def update_hyperparameters(ctxt, model_params):
     """
 
     config = ctxt.get_pipeline_config()
-    output_top_dir = ctxt.get_output_dir_path()
+
     hyper_path = os.path.join(output_top_dir, config['train']['output_subdir'])
+
     if 'train' not in config or 'hyperparams_filename' not in config['train']:
         hyperparams_filename = os.path.join(hyper_path, 'hyperparams.csv')
     else:
@@ -40,7 +89,7 @@ def update_hyperparameters(ctxt, model_params):
             df.loc[df.shape[0]] = [key, str(value)]
     df.to_csv(hyperparams_filename, index=False)
 
-def run_hyperparameter_tuning(ctxt):
+def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
     """
     Runs hyperparameter tuning by iterating over parameter combinations,
     selects the best model based on avg mAP, and saves the best model's weights.
@@ -49,6 +98,32 @@ def run_hyperparameter_tuning(ctxt):
         ctxt: The pipeline context object containing configuration and paths.
     """
     config = ctxt.get_pipeline_config()
+
+    preprocess_top_dir = ctxt.get_preprocessing_dir_path()
+    method = ctxt.config['preprocess_method'] # Currently 'padding' or 'tiling'
+
+    params = ctxt.config['preprocess_methods'][method]
+
+    train_template = params['train_hyperparameter_subdir']
+    val_template = params['val_hyperparameter_subdir']
+
+    output_top_dir = ctxt.get_output_dir_path()
+
+    image_size = params['image_size']
+    ctxt.maxwidth = image_size
+    ctxt.maxheight = image_size
+    stride = params['stride']
+    ctxt.train_hyperparameter_dir = os.path.join(preprocess_top_dir, train_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, stride=stride))
+    ctxt.val_hyperparameter_dir = os.path.join(preprocess_top_dir, val_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, stride=stride))
+
+    os.makedirs(ctxt.train_hyperparameter_dir, exist_ok=True)
+    os.makedirs(ctxt.val_hyperparameter_dir, exist_ok=True)
+
+    train_val_split(ctxt)
+
+    update_data_config_train_path(ctxt, ctxt.train_hyperparameter_dir)
+    update_data_config_val_path(ctxt, ctxt.val_hyperparameter_dir)
+
     model_name = config['model']
     model_dict = config['models'][model_name]
     base_params = model_dict['params']
@@ -60,7 +135,16 @@ def run_hyperparameter_tuning(ctxt):
     # Generate all combinations of hyperparameters from YAML
     keys, values = zip(*hyperparameter_grid.items())
     combinations = [dict(zip(keys, v)) for v in product(*values)]
-    print(f"Starting hyperparameter tuning with {len(combinations)} combinations...")
+
+    # Check if fractional factorial flag is set
+    if fractional_factorial:
+        # Use ParameterSampler for a structured, fractional search
+        n_iter = len(combinations) // 2  # Use half of the combinations as an example
+        param_distributions = {key: values for key, values in hyperparameter_grid.items()}
+        combinations = list(ParameterSampler(param_distributions, n_iter=n_iter, random_state=42))
+        print(f"Starting fractional factorial hyperparameter tuning with {len(combinations)} combinations...")
+    else:
+        print(f"Starting full factorial hyperparameter tuning with {len(combinations)} combinations...")
 
     for i, combination in enumerate(combinations):
         print(f"Testing combination {i+1}/{len(combinations)}: {combination}")
@@ -102,8 +186,10 @@ def run_hyperparameter_tuning(ctxt):
             model.save(ctxt.final_weights_path)
             print(f"New best model saved at: {ctxt.final_weights_path}")
 
-        # Update hyperparameters log
-        update_hyperparameters(ctxt, current_params)
+    # Update hyperparameters log
+    update_hyperparameters(ctxt, best_params)
+    update_data_config_train_path(ctxt, ctxt.train_baseline_dir)
+    update_data_config_val_path(ctxt, ctxt.val_baseline_dir) # sat path for fine-tuning to the baseline preprocessed data in YOLO data config
 
     print(f"Best Hyperparameters: {best_params}")
     print(f"Best Average mAP: {best_mAP}")

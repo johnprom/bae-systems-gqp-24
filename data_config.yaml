@@ -1,8 +1,8 @@
 names:
-- Pickup Truck
-- Utility Truck
-- Truck
-- Cargo Truck
+- Fixed-wing Aircraft
+- Small Aircraft
+- Cargo Plane
+- Helicopter
 nc: 4
-train: /Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/src/../preprocessed_datasets/data/baseline/train/padding/4224_4224
-val: /Users/dfox/WPI/WPIClasses/DS598GraduateQualifyingProject/git/bae-systems-gqp-24/src/../preprocessed_datasets/data/baseline/val/padding/4224_4224
+train: /home/gbarbosa/gitcd/bae-systems-gqp-24/src/./../preprocessed_datasets/data/hyperparameter_tuning/train/tiling/640_640/100
+val: /home/gbarbosa/gitcd/bae-systems-gqp-24/src/./../preprocessed_datasets/data/hyperparameter_tuning/val/tiling/640_640/100

@@ -34,6 +34,8 @@ class Pipeline:
         # Here is where to store state information. Do not put state information into self.config
         self.train_images_list = [] # list of image files in the training set
         self.val_images_list = [] # list of image files in the validation set
+        self.train_hyperparameter_images_list = [] # list of image files in the hyperparameter tuning train set
+        self.train_hyperparameter_images_list = [] # list of image files in the hyperparameter tuning validation set
 
         # The following code applies to all methods. If a new method is created that is not applicable to some lines here, break
         # them out into the proceeding if statement
@@ -386,8 +388,10 @@ class Pipeline:
     
         start_tr = time.time()
         print(f"preprocessing duration {start_tr - start_pp} seconds")
-        if "run_train" in pipeline_config and pipeline_config["run_train"]:
-            run_hyperparameter_tuning(self)
+        if "run_train" in pipeline_config and pipeline_config["run_train"] and "fractional_factorial" in pipeline_config['train']:
+            run_hyperparameter_tuning(self, fractional_factorial=True)
+        elif "run_train" in pipeline_config and pipeline_config["run_train"] and "fractional_factorial" not in pipeline_config['train']:
+            run_hyperparameter_tuning(self, fractional_factorial=False)
     
         start_kd = time.time()
         print(f"training duration {start_kd - start_tr} seconds")
