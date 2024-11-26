@@ -210,7 +210,7 @@ class XViewTiler:
                                 bbox[2] - x_start,
                                 bbox[3] - y_start
                             ]
-                            tile_bboxes.append(self.convert_bbox_to_yolo_format(adjusted_bbox, self.tile_size, self.tile_size))
+                            tile_bboxes.append(self.convert_bbox_to_yolo_format(adjusted_bbox, tile_width, tile_height))
                             tile_classes.append(cls_id)
 
                     if tile_bboxes:

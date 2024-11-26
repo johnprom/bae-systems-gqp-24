@@ -37,15 +37,15 @@ pixel_size: 0.3 # in meters
 
 target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
 
-   11: "Fixed-wing Aircraft"
-   12: "Small Aircraft"
-   13: "Cargo Plane"
-   15: "Helicopter"
+   20: "Pickup Truck"
+   21: "Utility Truck"
+   23: "Truck"
+   24: "Cargo Truck"
+#    - [20, "Pickup Truck"]
+#    - [21, "Utility Truck"]
+#    - [23, "Truck"]
+#    - [24, "Cargo Truck"]
 
-#    - [11, "Fixed-wing Aircraft"]
-#    - [12, "Small Aircraft"]
-#    - [13, "Cargo Plane"]
-#    - [14, "Helicopter"]
 # #
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time

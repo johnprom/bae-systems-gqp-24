@@ -388,11 +388,12 @@ class Pipeline:
     
         start_tr = time.time()
         print(f"preprocessing duration {start_tr - start_pp} seconds")
+
         if "run_train" in pipeline_config and pipeline_config["run_train"] and "fractional_factorial" in pipeline_config['train']:
             run_hyperparameter_tuning(self, fractional_factorial=True)
         elif "run_train" in pipeline_config and pipeline_config["run_train"] and "fractional_factorial" not in pipeline_config['train']:
             run_hyperparameter_tuning(self, fractional_factorial=False)
-    
+
         start_kd = time.time()
         print(f"training duration {start_kd - start_tr} seconds")
         if "run_knee_discovery" in pipeline_config and pipeline_config["run_knee_discovery"]:

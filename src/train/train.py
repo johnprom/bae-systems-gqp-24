@@ -5,7 +5,7 @@ Created on Tue Oct  1 14:01:23 2024
 
 @author: dfox
 """
-
+import copy
 import os
 import pandas as pd
 import random
@@ -19,44 +19,45 @@ from util.util import update_data_config_train_path, update_data_config_val_path
 
 def train_val_split(ctxt):
     """
+    Splits the dataset into training and validation sets.
     """
+
     config = ctxt.get_pipeline_config()
-    train_split = 0.80 # 0.0 to 1.0
-    # input_images_dir = os.path.join(config['top_dir'], config['input_images_subdir'])
+    train_split = 0.80  # Ratio for train split
     image_ext = ['.tif', '.tiff', '.png', '.gif', '.jpg', '.jpeg']
 
     interim_images_list = [x for x in os.listdir(ctxt.train_baseline_dir) if x[-4:] in image_ext or x[-5:] in image_ext]
 
     random.seed(43)
     num_train = math.ceil(len(interim_images_list) * train_split)
-    
-    # Split this list into a random train list and a random val list 
-    ctxt.train_hyperparameter_images_list = random.sample(interim_images_list, num_train) # already initialized to []
-    ctxt.val_hyperparameter_images_list = [x for x in interim_images_list if x not in ctxt.train_hyperparameter_images_list] # already initialized to []
-    
-    ctxt.train_hyperparameter_labels_list = [(x.split('.')[-2] +'.txt') for x in ctxt.train_hyperparameter_images_list]
-    ctxt.val_hyperparameter_labels_list = [(x.split('.')[-2] +'.txt') for x in ctxt.val_hyperparameter_images_list]
-    
+
+    # Split this list into a random train list and a random val list
+    ctxt.train_hyperparameter_images_list = random.sample(interim_images_list, num_train)
+    ctxt.val_hyperparameter_images_list = [x for x in interim_images_list if x not in ctxt.train_hyperparameter_images_list]
+
+    ctxt.train_hyperparameter_labels_list = [(x.rsplit('.', 1)[0] + '.txt') for x in ctxt.train_hyperparameter_images_list]
+    ctxt.val_hyperparameter_labels_list = [(x.rsplit('.', 1)[0] + '.txt') for x in ctxt.val_hyperparameter_images_list]
+
     for filename in ctxt.train_hyperparameter_images_list:
         if ctxt.verbose:
-            print(f"copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
+            print(f"Copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
         shutil.copy2(os.path.join(ctxt.train_baseline_dir, filename), ctxt.train_hyperparameter_dir)
     for filename in ctxt.val_hyperparameter_images_list:
         if ctxt.verbose:
-            print(f"copying file {filename} into directory (ctxt.val_hyperparameter_dir")
+            print(f"Copying file {filename} into directory {ctxt.val_hyperparameter_dir}")
         shutil.copy2(os.path.join(ctxt.train_baseline_dir, filename), ctxt.val_hyperparameter_dir)
 
     for filename in ctxt.train_hyperparameter_labels_list:
         full_path = os.path.join(ctxt.train_baseline_dir, filename)
         if os.path.exists(full_path):
             if ctxt.verbose:
-                print(f"copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
+                print(f"Copying file {filename} into directory {ctxt.train_hyperparameter_dir}")
             shutil.copy2(full_path, ctxt.train_hyperparameter_dir)
     for filename in ctxt.val_hyperparameter_labels_list:
         full_path = os.path.join(ctxt.train_baseline_dir, filename)
         if os.path.exists(full_path):
             if ctxt.verbose:
-                print(f"copying file {filename} into directory {ctxt.val_hyperparameter_dir}")
+                print(f"Copying file {filename} into directory {ctxt.val_hyperparameter_dir}")
             shutil.copy2(full_path, ctxt.val_hyperparameter_dir)
 
 def update_hyperparameters(ctxt, model_params):
@@ -70,9 +71,8 @@ def update_hyperparameters(ctxt, model_params):
     Returns:
         None
     """
-
     config = ctxt.get_pipeline_config()
-
+    output_top_dir = ctxt.get_output_dir_path()
     hyper_path = os.path.join(output_top_dir, config['train']['output_subdir'])
 
     if 'train' not in config or 'hyperparams_filename' not in config['train']:
@@ -91,23 +91,25 @@ def update_hyperparameters(ctxt, model_params):
 
 def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
     """
-    Runs hyperparameter tuning by iterating over parameter combinations,
-    selects the best model based on avg mAP, and saves the best model's weights.
+    Runs the fine-tuning process for a YOLO model using the specified context and configuration.
 
     Args:
-        ctxt: The pipeline context object containing configuration and paths.
+        ctxt: Context object containing configuration, model details, and utility methods.
+
+    Returns:
+        None: Trains the model and saves the fine-tuned weights to the specified path.
     """
+    print("Start Running Fine-tuning.")
+
     config = ctxt.get_pipeline_config()
 
     preprocess_top_dir = ctxt.get_preprocessing_dir_path()
-    method = ctxt.config['preprocess_method'] # Currently 'padding' or 'tiling'
+    method = ctxt.config['preprocess_method']  # Currently 'padding' or 'tiling'
 
     params = ctxt.config['preprocess_methods'][method]
 
     train_template = params['train_hyperparameter_subdir']
     val_template = params['val_hyperparameter_subdir']
-
-    output_top_dir = ctxt.get_output_dir_path()
 
     image_size = params['image_size']
     ctxt.maxwidth = image_size
@@ -146,6 +148,10 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
     else:
         print(f"Starting full factorial hyperparameter tuning with {len(combinations)} combinations...")
 
+    if not ctxt.is_model_yolo():
+        raise ValueError(f"unknown deep learning model {ctxt.get_model_name()} specified.")
+
+    # Loop through all hyperparameter combinations
     for i, combination in enumerate(combinations):
         print(f"Testing combination {i+1}/{len(combinations)}: {combination}")
 
@@ -189,8 +195,10 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
     # Update hyperparameters log
     update_hyperparameters(ctxt, best_params)
     update_data_config_train_path(ctxt, ctxt.train_baseline_dir)
-    update_data_config_val_path(ctxt, ctxt.val_baseline_dir) # sat path for fine-tuning to the baseline preprocessed data in YOLO data config
+    update_data_config_val_path(ctxt, ctxt.val_baseline_dir)  # Reset to baseline data paths
 
     print(f"Best Hyperparameters: {best_params}")
     print(f"Best Average mAP: {best_mAP}")
     print(f"Final weights saved to: {ctxt.final_weights_path}")
+
+    print("Finished Running Fine-tuning.")

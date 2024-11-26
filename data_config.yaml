@@ -1,8 +1,8 @@
 names:
-- Fixed-wing Aircraft
-- Small Aircraft
-- Cargo Plane
-- Helicopter
+- Pickup Truck
+- Utility Truck
+- Truck
+- Cargo Truck
 nc: 4
 train: /home/gbarbosa/gitcd/bae-systems-gqp-24/src/./../preprocessed_datasets/data/hyperparameter_tuning/train/tiling/640_640/100
 val: /home/gbarbosa/gitcd/bae-systems-gqp-24/src/./../preprocessed_datasets/data/hyperparameter_tuning/val/tiling/640_640/100
