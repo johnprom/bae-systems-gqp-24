@@ -9,6 +9,7 @@ import copy
 import os
 import pandas as pd
 from ultralytics import YOLO
+from util.util import update_data_config_train_path
 
 def update_hyperparameters(ctxt, model_params):
     """
@@ -72,6 +73,7 @@ def run_finetuning(ctxt):
             print("Added cuda to the model")
     
     # trained_model_filename_template = model_dict['trained_model_filename']
+    update_data_config_train_path(ctxt, ctxt.train_baseline_dir)
     model_params['data'] = data_config_path
     if ctxt.verbose:
         print(f"Start training model, params {model_params}")

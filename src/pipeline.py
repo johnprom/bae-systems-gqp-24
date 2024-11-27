@@ -90,6 +90,8 @@ class Pipeline:
             self.report_filename = self.config['report']['report_filename']
         else:
             self.report_filename = 'generated_report.pdf'
+
+        self.set_train_val_dirs()
         
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
@@ -294,32 +296,10 @@ class Pipeline:
         # yolo_id = ctxt.get_yolo_id()
         model_name = self.config['model']
         model_dict = self.config['models'][model_name]
-        model_params = model_dict['params']
-        # base_model = YOLO(yolo_id)
         
-        trained_model_filename_template = None
-        if 'trained_model_filename' in model_dict:
-            if 'trained_model_filename' != "":
-                trained_model_filename_template = model_dict['trained_model_filename']
-        if trained_model_filename_template is None:
-            self.final_weights_path = None
-            return
-        
-        params_str = ""
-        keys = sorted(list(model_params.keys()))
-        for key in keys:
-            params_str += "_"
-            params_str += str(key)
-            params_str += "="
-            params_str += str(model_params[key])
+        self.final_weights_path = os.path.join(self.get_top_dir(), self.config['trained_models_subdir'], 
+                                               model_dict['trained_model_filename'])
 
-        params_hash = hash(params_str)
-        if self.verbose:
-            print(f"hash for params is {params_hash}")
-        self.final_weights_path = os.path.join(
-            self.get_top_dir(), self.config['trained_models_subdir'], 
-            trained_model_filename_template.format(hashed_params=str(params_hash)))
-    
     def is_model_yolo(self):
         """
         Checks if the specified model is a YOLO model.
@@ -355,6 +335,28 @@ class Pipeline:
 
         return False        
     
+    def set_train_val_dirs(self):
+        preprocess_top_dir = self.get_preprocessing_dir_path()
+        method = self.config['preprocess_method'] # Currently 'padding' or 'tiling'
+
+        params = self.config['preprocess_methods'][method]
+        train_template = params['train_baseline_subdir']
+        val_template = params['val_baseline_subdir']
+
+        method = self.config['preprocess_method'] # Currently 'padding' or 'tiling'
+
+        # Method-specific code
+        # use ctxt.interim_images_dir to temporarily place preprocessed files prior to train_test_split
+        image_size = params['image_size']
+        self.maxwidth = image_size
+        self.maxheight = image_size
+        stride = params['stride']
+        self.train_baseline_dir = os.path.join(preprocess_top_dir,
+                                               train_template.format(maxwidth=self.maxwidth, maxheight=self.maxheight,
+                                                                     stride=stride))
+        self.val_baseline_dir = os.path.join(preprocess_top_dir,
+                                             val_template.format(maxwidth=self.maxwidth, maxheight=self.maxheight, stride=stride))
+
     def run_clean(self):
         """
         Cleans up the output directory by removing results and reports.

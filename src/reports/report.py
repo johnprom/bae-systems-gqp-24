@@ -17,7 +17,7 @@ from knee_discovery.knee_discovery import calc_degradation_factor
 #degradation_factor,knee
 
 header_to_readable = {
-    'object_name': '',
+    'object_name': 'Object Class',
     'original_resolution_width': 'Width',
     'original_resolution_height': 'Height',
     'effective_resolution_width': 'Effective Width',
@@ -54,6 +54,40 @@ def get_timestr_file_last_mod(filename):
     final_time = f"{formatted_time}_{fractional_seconds}"
     return final_time
 
+def display_table(df, intro_text, page_units_used, output_filename):
+    # page_units_used = 0
+    cell_height = 6
+    cell_width = 180 / df.shape[1]
+    # num_lines = df.shape[0]
+    pdf = FPDF()
+
+    # page_units_used += (cell_height * num_lines)
+    # if page_units_used >= 250:
+    pdf.add_page()
+    # page_units_used = (cell_height * num_lines)
+
+    pdf.set_font("Times", size=12) # Times Roman
+    pdf.ln(20)
+    pdf.cell(180, 10, txt=intro_text, ln=True, align='C')
+    pdf.ln(4)
+    for cell_header in df:
+        this_header = header_to_readable[cell_header]
+        pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C')
+    pdf.ln(cell_height)
+    for idx, row in df.iterrows():
+        for cell_header in df:
+            this_header = header_to_readable[cell_header]
+            if cell_header == 'mAP':
+                this_valuestr = f"{round(row['mAP'], 3):.{3}f}"
+            elif cell_header == 'GSD':
+                this_valuestr = f"{round(row['GSD'], 4):.{4}f}"
+            else:
+                this_valuestr = f"{row[cell_header]}"
+            pdf.cell(cell_width, cell_height, txt=this_valuestr, border=1, align='C')
+        # Move to the next line after each row
+        pdf.ln(cell_height)
+    pdf.output(output_filename)
+
 def generate_report(ctxt):
     """
     Generates a report based on the results from the knee discovery module and saves it in the configured directory.
@@ -69,7 +103,7 @@ def generate_report(ctxt):
     output_top_dir = ctxt.get_output_dir_path()
 
     reports_path = os.path.join(output_top_dir, config['report']['output_subdir'])
-    
+
     if 'clean_subdir' in config['report'] and config['report']['clean_subdir']:
         shutil.rmtree(reports_path)
 
@@ -85,7 +119,7 @@ def generate_report(ctxt):
     hyperparams_filename_in_report_path = os.path.join(report_path, os.path.basename(hyperparams_filename))
 
     if not os.path.exists(results_filename) and not os.path.exists(results_filename_in_report_path):
-        print("Report generator could not find results csv file! "
+        print("Error: Report generator could not find results csv file! "
               + "The knee discovery module was either not run, or not run successfully.")
         return
 
@@ -94,9 +128,9 @@ def generate_report(ctxt):
         print("Warning: Report generator could not find hyperparameters file. "
               + "Hyperparameters will not be displayed.")
         display_hyperparams = False
-    
+
     os.makedirs(report_path, exist_ok=True)
-    
+
     for filepath in os.listdir(results_path):
         res_filename = os.path.join(results_path, filepath)
         res_filename_in_report_path = os.path.join(report_path, filepath)
@@ -104,10 +138,10 @@ def generate_report(ctxt):
             try:
                 shutil.copy2(res_filename, res_filename_in_report_path)
             except PermissionError:
-                print(f"Report Generator does not have permission to access {res_filename}!")
+                print(f"Error: Report Generator does not have permission to access {res_filename}!")
                 return
             except IsADirectoryError:
-                print(f"Report Generator: results csv file {results_filename} "
+                print(f"Error: Report Generator: results csv file {results_filename} "
                       + f"or report destination file {results_filename_in_report_path} is a directory. "
                       + "Please fix and re-run Report Generator.")
                 return
@@ -118,15 +152,15 @@ def generate_report(ctxt):
             try:
                 shutil.copytree(res_filename, res_filename_in_report_path, dirs_exist_ok=True)
             except PermissionError:
-                print(f"Report Generator does not have permission to access {res_filename}!")
+                print(f"Error: Report Generator does not have permission to access {res_filename}!")
                 return
-        
+
 
     if not os.path.exists(hyperparams_filename_in_report_path):
         try:
             shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
         except PermissionError:
-            print("Report Generator does not have permission to access the hyperparameters csv file! "
+            print("Error: Report Generator does not have permission to access the hyperparameters csv file! "
                   + f"Please change the permissions on the following file: {hyperparams_filename}")
             return
         except IsADirectoryError:
@@ -137,13 +171,14 @@ def generate_report(ctxt):
         except shutil.SameFileError:
             # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
             pass
-    
+
     data_IRPC = pd.read_csv(results_filename_in_report_path, index_col=False)
+    data_IRPC['mAP'] = data_IRPC['mAP'].astype(float).apply(lambda x: round(x, 3))
     if 'display_labels' in config['report']:
         report_labels = config['report']['display_labels']
         for label in report_labels:
             if label not in config['target_labels'].values():
-                print(f"Report Generator: label {label} specified in reports_label list was not in target_labels "
+                print(f"Warning: Report Generator: label {label} specified in reports_label list was not in target_labels "
                       + "in configuration file.")
         report_labels_filter = [label for label in report_labels if label in config['target_labels'].values()]
         filter_pattern = '|'.join(report_labels_filter)
@@ -153,26 +188,42 @@ def generate_report(ctxt):
                                                               data_IRPC['original_resolution_height'],
                                                               data_IRPC['effective_resolution_width'],
                                                               data_IRPC['effective_resolution_height'])
+
+    data_IRPC_knee = data_IRPC[data_IRPC['knee'] == True]
+    data_IRPC_knee = data_IRPC_knee.sort_values('mAP', ascending=False).reset_index(drop=True)
+    data_IRPC_knee = data_IRPC_knee[['object_name', 'mAP', 'GSD']]
+    display_table(data_IRPC_knee,
+                  "Mean Average Precision (mAP) and Ground Sample Distance (GSD) for detection of all objects classes at knee",
+                  0, os.path.join(report_path, 'obj_class_table.pdf'))
+
     data_IRPC['median_mAP'] = data_IRPC.groupby('object_name')['mAP'].transform('median')
     sorted_objects = data_IRPC[['object_name', 'median_mAP']]\
         .drop_duplicates().sort_values(by='median_mAP', ascending=False)['object_name']
     data_IRPC = data_IRPC.drop('median_mAP', axis=1)
-    
-    num_curves_per_graph = 5
+
+    if 'report' in config and 'curves_per_graph' in config['report']:
+        num_curves_per_graph = config['report']['curves_per_graph']
+        if num_curves_per_graph > 5:
+            num_curves_per_graph = 5
+    else:
+        num_curves_per_graph = 5
+
     curve_color = ['blue', 'green', 'orange', 'red', 'purple']
     assert len(curve_color) >= num_curves_per_graph
-    
-    knee_color = 'red'
+
+    knee_legend_color = 'black'
 
     graph_array = []
     curve_array = []
-    for i, object_name in enumerate(sorted_objects):
+    i = 0
+    for object_name in sorted_objects:
         if object_name in ctxt.report_names:
             if (i % num_curves_per_graph) == 0:
                 if i != 0:
                     graph_array.append(curve_array)
                 curve_array = []
             curve_array.append(object_name)
+            i += 1
     if len(curve_array) > 0:
         graph_array.append(curve_array)
 
@@ -181,10 +232,12 @@ def generate_report(ctxt):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
-            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
+            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy() # TODO take this out later
+            # object_data_IRPC = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
+            #                                & (data_IRPC['knee'] != True))].copy()
             object_data_IRPC = object_data_IRPC.sort_values('degradation_factor').reset_index(drop=True)
             num_data_points = object_data_IRPC.shape[0]
-            plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve", 
+            plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve",
                       color=curve_color[o_i], marker='o', markersize=6, markeredgecolor='black', markerfacecolor=curve_color[o_i])
 
             if num_data_points > 1:
@@ -202,22 +255,22 @@ def generate_report(ctxt):
             if not knee_points.empty:
                 knee_degredation_factor = knee_points['degradation_factor']
                 knee_map = knee_points['mAP']
-                plt.scatter(knee_degredation_factor, knee_map, color=knee_color, s=100, zorder=5)
-    
-        legend_elements = [Line2D([0], [0], marker='o', color='w', label='Knees', markerfacecolor=knee_color, markersize=10)]
-        
-        plt.title("IRP Curves with Knee Points")
+                plt.scatter(knee_degredation_factor, knee_map, color=curve_color[o_i], s=100, zorder=5, marker="^")
+
+        legend_elements = [Line2D([0], [0], marker='^', color='w', label='Knees', markerfacecolor=knee_legend_color, markersize=10)]
+
+        plt.title("Image Resolution-Performance (IRP) Curves with Knee Points")
         plt.xlabel("Ground Sample Distance per pixel (meters)")
         plt.ylabel("Mean Average Precision (mAP)")
-        
-        plt.legend(# loc='upper left',  
+
+        plt.legend(# loc='upper left',
                     handles=plt.gca().get_legend_handles_labels()[0] + legend_elements)
-        
-        
+
+
         plt.grid(True)
         plt.savefig(os.path.join(report_path, f'irp_curves_{g_i}.pdf'))
         plt.close()
-        
+
         pdf = FPDF()
 
         pdf.add_page()
@@ -228,7 +281,7 @@ def generate_report(ctxt):
                 + "The x-axis shows the degraded resolution factor, by which the original resolution was reduced and then blown "
                 + "back up, effectively degrading the image quality. The y-axis shows the mean average aprecision (mAP) of the "
                 + "model's performance. "
-                + "The red-marked 'knee' points indicate a significant inflection point where the mAP performance starts to plateau."
+                + "The black 'knee' triangle points indicate a significant inflection point where the mAP performance starts to plateau."
                 )
 
         if display_hyperparams:
@@ -271,6 +324,7 @@ def generate_report(ctxt):
 
             pdf.ln(20)
 
+
         page_units_used = 0
         cell_height = 6
         first_page = True
@@ -288,35 +342,34 @@ def generate_report(ctxt):
             pdf.ln(4)
             for cell_header in object_data_IRPC:
                 this_header = header_to_readable[cell_header]
-                if cell_header == 'mAP':
-                    cell_width = 15
-                elif cell_header == 'knee':
-                    cell_width = 21
-                elif cell_header == 'GSD':
-                    cell_width = 24
-                else:
-                    cell_width = 2*len(this_header)
-                if this_header != '':
+                if this_header != '' and this_header != 'Object Class':
+                    if cell_header == 'mAP':
+                        cell_width = 15
+                    elif cell_header == 'knee':
+                        cell_width = 21
+                    elif cell_header == 'GSD':
+                        cell_width = 24
+                    else:
+                        cell_width = 2*len(this_header)
                     pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C')
             pdf.ln(cell_height)
             for idx, row in object_data_IRPC.iterrows():
                 for cell_header in object_data_IRPC:
                     this_header = header_to_readable[cell_header]
-                    if this_header == '':
-                        continue
-                    if cell_header == 'knee':
-                        this_valuestr = knee_type_to_readable[row[cell_header]]
-                        cell_width = 21
-                    elif cell_header == 'mAP':
-                        this_valuestr = f"{round(row['mAP'], 4)}"
-                        cell_width = 15
-                    elif cell_header == 'GSD':
-                        this_valuestr = f"{round(row['GSD'], 3)}"
-                        cell_width = 24
-                    else:
-                        this_valuestr = f"{row[cell_header]}"
-                        cell_width = 2*len(this_header)
-                    pdf.cell(cell_width, cell_height, txt=this_valuestr, border=1, align='C')
+                    if this_header != '' and this_header != 'Object Class':
+                        if cell_header == 'knee':
+                            this_valuestr = knee_type_to_readable[row[cell_header]]
+                            cell_width = 21
+                        elif cell_header == 'mAP':
+                            this_valuestr = f"{round(row['mAP'], 3):.{3}f}"
+                            cell_width = 15
+                        elif cell_header == 'GSD':
+                            this_valuestr = f"{round(row['GSD'], 4):.{4}f}"
+                            cell_width = 24
+                        else:
+                            this_valuestr = f"{row[cell_header]}"
+                            cell_width = 2*len(this_header)
+                        pdf.cell(cell_width, cell_height, txt=this_valuestr, border=1, align='C')
                 # Move to the next line after each row
                 pdf.ln(cell_height)
             txt = "Legend:"
@@ -325,20 +378,22 @@ def generate_report(ctxt):
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             txt = "    Effective Width, Effective Height: width and height the image was degraded to "
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
-            txt = "                                                             prior to resizing to the original height"
+            txt = "                                                             prior to resizing to the original width and height"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             txt = "    mAP: mean average precision of the bounding boxes for the object class"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
-            txt = "    GSP (meters): the size (sample) of one dimension of a pixel on the ground"
+            txt = "    GSD (meters): the size (sample) of one dimension of a pixel on the ground"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             txt = "    Pixels on Target: the number of pixels that the object occupies"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
-            txt = "    Knee: Yes if the data point is a knee, No if not"
+            txt = f"    Knee: {knee_type_to_readable[True]} if the data point is a knee, {knee_type_to_readable[False]} if not"
             pdf.cell(1, 6, txt=txt, ln=True, align='L')
             first_page = False
         pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
-    
+
     merger = PdfMerger()
+    merger.append(os.path.join(report_path, 'obj_class_table.pdf'))
+    os.remove(os.path.join(report_path, 'obj_class_table.pdf'))
     for i in range(num_graphs):
         merger.append(os.path.join(report_path, f'irp_curves_{i}.pdf'))
         merger.append(os.path.join(report_path, f'irp_analysis_{i}.pdf'))
@@ -348,7 +403,7 @@ def generate_report(ctxt):
     report_filename = os.path.join(report_path, ctxt.report_filename)
     merger.write(report_filename)
     merger.close()
-    
+
     print(f"Report generated: {ctxt.report_filename}")
 
 
