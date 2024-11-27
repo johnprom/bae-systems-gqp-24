@@ -22,3 +22,4 @@ dependencies:
       - fpdf
       - kneed
       - pwlf
+      - scikit-learn

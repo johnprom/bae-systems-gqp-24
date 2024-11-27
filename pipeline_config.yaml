@@ -36,6 +36,7 @@ trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, s
 pixel_size: 0.3 # in meters
 
 target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
+
    20: "Pickup Truck"
    21: "Utility Truck"
    23: "Truck"
@@ -44,6 +45,7 @@ target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to
 #    - [21, "Utility Truck"]
 #    - [23, "Truck"]
 #    - [24, "Cargo Truck"]
+
 # #
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time
@@ -63,6 +65,7 @@ train:
   #
   output_subdir: "results" # REQUIRED FOR TRAIN AND GENERATE_REPORT, subdir for top_dir/<global output_subdir>
   hyperparameters_filename: "hyperparams.csv" # Filename to store the hyperparameters final training, default is "hyperparams.csv"
+  fractional_factorial: true  # default false
   # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in 
   # knee discovery
 knee_discovery:
@@ -101,6 +104,8 @@ preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be spe
     train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
     val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
     train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+    train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
+    val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
     # REQUIRED FOR TILING METHOD
     #
     val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
@@ -141,3 +146,9 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
       epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    hyperparameters:
+      cls: [1.0, 1.5]
+      batch: [16]
+      epochs: [50, 100]
+      #lr0: [0.01, 0.005, 0.001]
+      #momentum: [0.8, 0.95]
