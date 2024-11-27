@@ -188,9 +188,6 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     class_pixel_area = ctxt.object_sizes.get(name, 1)
     pixels_on_target = math.ceil((original_gsd ** 2) * class_pixel_area / (gsd_per_pixel ** 2))
 
-    if ctxt.verbose:
-        print(f"rcdf length {rcdf.shape[0]} before setting")
-
     rcdf.loc[rcdf.shape[0]] = [name, orig_width, orig_height, degraded_width, degraded_height, mAP, degradation_factor,
                                gsd_per_pixel, pixels_on_target, True]
     
@@ -199,17 +196,11 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     if ctxt.verbose:
         print(f"Logged IAPC results: Object class {name}, Original {orig_image_size}, "
               + f"Degraded ({degraded_width}, {degraded_height}), mAP {mAP}, knee True", flush=True)
-        print(f"rcdf length {rcdf.shape[0]} before drop duplicates", flush=True)
     
     rcdf = drop_dup_results(ctxt, rcdf)
-    if ctxt.verbose:
-        print(f"rcdf length {rcdf.shape[0]} after drop duplicates", flush=True)
-        print(rcdf.tail(1))
     rcdf.to_csv(eval_results_filename, index=False)
     if ctxt.cache_results:
         ctxt.results_cache_df = rcdf.copy()
-        if ctxt.verbose:
-            print(f"cache results length {ctxt.results_cache_df.shape[0]}", flush=True)
     
 def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     
@@ -278,8 +269,6 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
-    if ctxt.verbose:
-        print(mAP_list)
     
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
     if len(mAP_list) == 0:

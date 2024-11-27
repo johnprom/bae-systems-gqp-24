@@ -97,14 +97,11 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     num_images = len(val_image_filenames)
     val_label_filenames = [replace_image_ext_with_label(fn) for fn in val_image_filenames]
     for idx, val_image_filename in enumerate(val_image_filenames):
-        val_verbose = False
         val_label_filename = val_label_filenames[idx]
         if os.path.exists(val_image_filename) and os.path.exists(val_label_filename):
             val_degraded_image_filename = os.path.join(degraded_dir, os.path.basename(val_image_filename))
             val_degraded_label_filename = os.path.join(degraded_dir, os.path.basename(val_label_filename))
             if not os.path.exists(val_degraded_image_filename):
-                if val_verbose:
-                    print("degraded image 1042_5_3.png does not exist")
                 if orig_image_size == degraded_image_size:
                     # resolutions and hyperparameters are equal, simple copy
                     shutil.copyfile(val_image_filename, val_degraded_image_filename)
@@ -112,9 +109,9 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
                     try:
                         image = Image.open(val_image_filename)
                         this_orig_image_size = image.size
-                        this_degraded_width = int(math.ceil((degraded_image_size[0] / orig_image_size[0]) 
+                        this_degraded_width = int(math.ceil((degraded_image_size[0] / orig_image_size[0])
                                                             * this_orig_image_size[0]))
-                        this_degraded_height = int(math.ceil((degraded_image_size[1] / orig_image_size[1]) 
+                        this_degraded_height = int(math.ceil((degraded_image_size[1] / orig_image_size[1])
                                                              * this_orig_image_size[1]))
 
                         val_shrunk_image = image.resize((this_degraded_width, this_degraded_height))
@@ -322,7 +319,6 @@ def calculate_knee(ctxt, class_name, results_class_df):
             # print(f"Knee found at degradation factor {knee_x} for class {class_name}")
 
         # Update the knee results
-        # update_knee_results(ctxt, class_name, (w_knee, h_knee), knee_x, knee_y)
         update_knee_results(ctxt, class_name, (w_knee, h_knee), knee_x, knee_y)
 
         return [knee_x], [knee_y]
