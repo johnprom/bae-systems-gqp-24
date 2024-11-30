@@ -1,11 +1,12 @@
 import datetime
 from fpdf import FPDF
-# import math
+import math
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 from pathlib import Path
 from PyPDF2 import PdfMerger
 import shutil
@@ -54,10 +55,12 @@ def get_timestr_file_last_mod(filename):
     final_time = f"{formatted_time}_{fractional_seconds}"
     return final_time
 
-def display_table(df, intro_text, page_units_used, output_filename):
+def display_table(df, intro_text, page_units_used, precision_dict, output_filename):
     # page_units_used = 0
-    cell_height = 6
-    cell_width = 180 / df.shape[1]
+    if df is None or df.shape[0] == 0:
+        print("df is empty")
+        return None
+    cell_height = 5
     # num_lines = df.shape[0]
     pdf = FPDF()
 
@@ -66,27 +69,57 @@ def display_table(df, intro_text, page_units_used, output_filename):
     pdf.add_page()
     # page_units_used = (cell_height * num_lines)
 
-    pdf.set_font("Times", size=12) # Times Roman
+    pdf.set_font("Times", size=11) # Times Roman
     pdf.ln(20)
-    pdf.cell(180, 10, txt=intro_text, ln=True, align='C')
+    pdf.cell(190, 10, txt=intro_text, ln=True, align='C')
     pdf.ln(4)
+    width_dict = {}
+    df_temp = df.copy()
+    print(df_temp['GSD'])
+    for cell_header in df_temp:
+        if is_numeric_dtype(df_temp[cell_header]):
+            mult = 3
+        else:
+            mult = 2
+        width_header = 2*len(header_to_readable[cell_header])
+        print(width_header)
+        df_temp[cell_header] = df_temp[cell_header].astype(str)
+        print(df_temp)
+        width_column = mult*df_temp[cell_header].apply(len).max()
+        print(header_to_readable[cell_header], width_header, width_column)
+        width_dict[cell_header] = max(width_column, width_header)
+    print("width_dict:")
+    print(width_dict)
+    total_width = sum(list(width_dict.values()))
+    print(f"total_width {total_width}")
+    for cell_header in width_dict:
+        width_dict[cell_header] = int(round(((width_dict[cell_header] * 190) / total_width), 0))
     for cell_header in df:
-        this_header = header_to_readable[cell_header]
-        pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C')
+        # this_header = header_to_readable[cell_header]
+        # cell_header_width = 2*len(this_header)
+        # cell_max_value_width = 2*max(list(width_dict[cell_header]))
+        # cell_width = max(cell_header_width, cell_max_value_width)
+        pdf.cell(width_dict[cell_header], cell_height, txt=header_to_readable[cell_header], border=1, align='C')
     pdf.ln(cell_height)
     for idx, row in df.iterrows():
         for cell_header in df:
-            this_header = header_to_readable[cell_header]
-            if cell_header == 'mAP':
-                this_valuestr = f"{round(row['mAP'], 3):.{3}f}"
-            elif cell_header == 'GSD':
-                this_valuestr = f"{round(row['GSD'], 4):.{4}f}"
+            # this_header = header_to_readable[cell_header]
+            this_valuestr = None
+            if cell_header in precision_dict:
+                this_valuestr = f"{row[cell_header]:.{precision_dict[cell_header]}f}"
             else:
-                this_valuestr = f"{row[cell_header]}"
-            pdf.cell(cell_width, cell_height, txt=this_valuestr, border=1, align='C')
+                this_valuestr = str(row[cell_header])
+            # if cell_header == 'mAP':
+            #     this_valuestr = f"{row['mAP']:.{3}f}"
+            # elif cell_header == 'GSD':
+            #     this_valuestr = f"{row['GSD']:.{4}f}"
+            # else:
+            #     this_valuestr = f"{row[cell_header]}"
+            pdf.cell(width_dict[cell_header], cell_height, txt=this_valuestr, border=1, align='C')
         # Move to the next line after each row
         pdf.ln(cell_height)
     pdf.output(output_filename)
+    return output_filename
 
 def generate_report(ctxt):
     """
@@ -122,12 +155,6 @@ def generate_report(ctxt):
         print("Error: Report generator could not find results csv file! "
               + "The knee discovery module was either not run, or not run successfully.")
         return
-
-    display_hyperparams = True
-    if not os.path.exists(hyperparams_filename):
-        print("Warning: Report generator could not find hyperparameters file. "
-              + "Hyperparameters will not be displayed.")
-        display_hyperparams = False
 
     os.makedirs(report_path, exist_ok=True)
 
@@ -173,7 +200,7 @@ def generate_report(ctxt):
             pass
 
     data_IRPC = pd.read_csv(results_filename_in_report_path, index_col=False)
-    data_IRPC['mAP'] = data_IRPC['mAP'].astype(float).apply(lambda x: round(x, 3))
+    # data_IRPC['mAP'] = data_IRPC['mAP'].astype(float).apply(lambda x: round(x, 3))
     if 'display_labels' in config['report']:
         report_labels = config['report']['display_labels']
         for label in report_labels:
@@ -191,10 +218,65 @@ def generate_report(ctxt):
 
     data_IRPC_knee = data_IRPC[data_IRPC['knee'] == True]
     data_IRPC_knee = data_IRPC_knee.sort_values('mAP', ascending=False).reset_index(drop=True)
-    data_IRPC_knee = data_IRPC_knee[['object_name', 'mAP', 'GSD']]
-    display_table(data_IRPC_knee,
-                  "Mean Average Precision (mAP) and Ground Sample Distance (GSD) for detection of all objects classes at knee",
-                  0, os.path.join(report_path, 'obj_class_table.pdf'))
+    precision_dict = {}
+    data_IRPC_knee['mAP'] = data_IRPC_knee['mAP'].apply(lambda x: round(x, 3))
+    precision_dict['mAP'] = 3
+    data_IRPC_knee['GSD'] = data_IRPC_knee['GSD'].apply(lambda x: round(x, 2))
+    precision_dict['GSD'] = 2
+    data_IRPC_knee = data_IRPC_knee[['object_name', 'mAP', 'GSD', 'pixels_on_target']]
+    obj_class_filename = display_table(
+        data_IRPC_knee,
+        "Mean Average Precision (mAP), Ground Sample Distance (GSD), and Pixels On Target for detection of all classes at knee",
+        0, precision_dict, os.path.join(report_path, 'obj_class_table.pdf'))
+
+    display_hyperparams = False
+    if not os.path.exists(hyperparams_filename):
+        print("Warning: Report generator could not find hyperparameters file. "
+              + "Hyperparameters will not be displayed.")
+    else:
+        pdf = FPDF()
+
+        pdf.add_page()
+        pdf.set_font("Times", size=11) # Times Roman
+        pdf.ln(20)
+        pdf.cell(200, 6, txt="Hyperparameters used", ln=True, align='C')
+        pdf.ln(4)
+
+        cell_width = 100
+        cell_height = 5
+
+        preprocess_method = config['preprocess_method']
+        pdf.cell(cell_width, cell_height, txt="Image Preprocessing Method", border=1, align='C')
+        pdf.cell(cell_width, cell_height, txt=f"{preprocess_method}", border=1, align='C')
+        pdf.ln(cell_height)
+
+        pdf.cell(cell_width, cell_height, txt="Image Size", border=1, align='C')
+        pdf.cell(cell_width, cell_height, txt=f"{config['preprocess_methods'][preprocess_method]['image_size']}", border=1, align='C')
+        pdf.ln(cell_height)
+
+        if config['preprocess_method'] == 'tiling':
+            pdf.cell(cell_width, cell_height, txt="Stride", border=1, align='C')
+            pdf.cell(cell_width, cell_height, txt=f"{config['preprocess_methods']['tiling']['stride']}", border=1, align='C')
+            pdf.ln(cell_height)
+
+        learning_model = config['model']
+        pdf.cell(cell_width, cell_height, txt="Learning Model", border=1, align='C')
+        pdf.cell(cell_width, cell_height, txt=f"{learning_model}", border=1, align='C')
+        pdf.ln(cell_height)
+
+        df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
+        # model_dict = df.to_dict()
+
+        # for key, value in model_dict.items():
+        for idx, row in df.iterrows():
+            pdf.cell(cell_width, cell_height, txt=f"{learning_model}: {row['parameter']}", border=1, align='C')
+            pdf.cell(cell_width, cell_height, txt=f"{row['value']}", border=1, align='C')
+            pdf.ln(cell_height)
+
+        pdf.ln(20)
+        pdf.output(os.path.join(report_path, 'hyperparams.pdf'))
+        display_hyperparams = True
+
 
     data_IRPC['median_mAP'] = data_IRPC.groupby('object_name')['mAP'].transform('median')
     sorted_objects = data_IRPC[['object_name', 'median_mAP']]\
@@ -232,9 +314,9 @@ def generate_report(ctxt):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
-            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy() # TODO take this out later
-            # object_data_IRPC = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
-            #                                & (data_IRPC['knee'] != True))].copy()
+            # object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy() # TODO take this out later
+            object_data_IRPC = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
+                                            & (data_IRPC['knee'] != True))].copy()
             object_data_IRPC = object_data_IRPC.sort_values('degradation_factor').reset_index(drop=True)
             num_data_points = object_data_IRPC.shape[0]
             plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve",
@@ -251,7 +333,8 @@ def generate_report(ctxt):
                 if row['knee'] == 'unknown':
                     object_data_IRPC.at[idx, 'knee'] = False
 
-            knee_points = object_data_IRPC[object_data_IRPC['knee']]
+            knee_points = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
+                                     & (data_IRPC['knee'] == True))].copy()
             if not knee_points.empty:
                 knee_degredation_factor = knee_points['degradation_factor']
                 knee_map = knee_points['mAP']
@@ -274,59 +357,19 @@ def generate_report(ctxt):
         pdf = FPDF()
 
         pdf.add_page()
-        pdf.set_font("Times", size=12) # Times Roman
+        pdf.set_font("Times", size=11) # Times Roman
         pdf.cell(200, 10, txt="IRP Curve Analysis", ln=True, align='C')
         pdf.ln(10)
         txt = (f"The plot represents {num_curves} IRP curve(s). Each curve corresponds to a specific object detection. "
                 + "The x-axis shows the degraded resolution factor, by which the original resolution was reduced and then blown "
                 + "back up, effectively degrading the image quality. The y-axis shows the mean average aprecision (mAP) of the "
                 + "model's performance. "
-                + "The black 'knee' triangle points indicate a significant inflection point where the mAP performance starts to plateau."
+                + "The 'knee' triangle points indicate a significant inflection point where the mAP performance starts to plateau."
                 )
-
-        if display_hyperparams:
-            pdf.multi_cell(0, 10, txt=txt)
-            pdf.ln(20)
-            pdf.cell(200, 10, txt="Hyperparameters for previous graph", ln=True, align='C')
-            pdf.ln(10)
-
-            cell_width = 90
-            cell_height = 10
-
-            preprocess_method = config['preprocess_method']
-            pdf.cell(cell_width, cell_height, txt="Image Preprocessing Method", border=1, align='C')
-            pdf.cell(cell_width, cell_height, txt=f"{preprocess_method}", border=1, align='C')
-            pdf.ln(cell_height)
-
-            pdf.cell(cell_width, cell_height, txt="Image Size", border=1, align='C')
-            pdf.cell(cell_width, cell_height, txt=f"{config['preprocess_methods'][preprocess_method]['image_size']}", border=1, align='C')
-            pdf.ln(cell_height)
-
-            if config['preprocess_method'] == 'tiling':
-                pdf.cell(cell_width, cell_height, txt="Stride", border=1, align='C')
-                pdf.cell(cell_width, cell_height, txt=f"{config['preprocess_methods']['tiling']['stride']}", border=1, align='C')
-                pdf.ln(cell_height)
-
-            learning_model = config['model']
-            pdf.cell(cell_width, cell_height, txt="Learning Model", border=1, align='C')
-            pdf.cell(cell_width, cell_height, txt=f"{learning_model}", border=1, align='C')
-            pdf.ln(cell_height)
-
-            df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
-            df = pd.read_csv(hyperparams_filename_in_report_path, index_col=False)
-            # model_dict = df.to_dict()
-
-            # for key, value in model_dict.items():
-            for idx, row in df.iterrows():
-                pdf.cell(cell_width, cell_height, txt=f"{learning_model}: {row['parameter']}", border=1, align='C')
-                pdf.cell(cell_width, cell_height, txt=f"{row['value']}", border=1, align='C')
-                pdf.ln(cell_height)
-
-            pdf.ln(20)
-
+        pdf.multi_cell(0, 5, txt=txt)
 
         page_units_used = 0
-        cell_height = 6
+        cell_height = 5
         first_page = True
         for i, object_name in enumerate(curve_array):
             object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy()
@@ -364,7 +407,7 @@ def generate_report(ctxt):
                             this_valuestr = f"{round(row['mAP'], 3):.{3}f}"
                             cell_width = 15
                         elif cell_header == 'GSD':
-                            this_valuestr = f"{round(row['GSD'], 4):.{4}f}"
+                            this_valuestr = f"{round(row['GSD'], 4):.{2}f}"
                             cell_width = 24
                         else:
                             this_valuestr = f"{row[cell_header]}"
@@ -373,27 +416,31 @@ def generate_report(ctxt):
                 # Move to the next line after each row
                 pdf.ln(cell_height)
             txt = "Legend:"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "    Width, Height: width and height of the image"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "    Effective Width, Effective Height: width and height the image was degraded to "
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "                                                             prior to resizing to the original width and height"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "    mAP: mean average precision of the bounding boxes for the object class"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "    GSD (meters): the size (sample) of one dimension of a pixel on the ground"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = "    Pixels on Target: the number of pixels that the object occupies"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             txt = f"    Knee: {knee_type_to_readable[True]} if the data point is a knee, {knee_type_to_readable[False]} if not"
-            pdf.cell(1, 6, txt=txt, ln=True, align='L')
+            pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             first_page = False
         pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
 
     merger = PdfMerger()
-    merger.append(os.path.join(report_path, 'obj_class_table.pdf'))
-    os.remove(os.path.join(report_path, 'obj_class_table.pdf'))
+    if obj_class_filename is not None:
+        merger.append(os.path.join(report_path, 'obj_class_table.pdf'))
+        os.remove(os.path.join(report_path, 'obj_class_table.pdf'))
+    if display_hyperparams:
+        merger.append(os.path.join(report_path, 'hyperparams.pdf'))
+        os.remove(os.path.join(report_path, 'hyperparams.pdf'))
     for i in range(num_graphs):
         merger.append(os.path.join(report_path, f'irp_curves_{i}.pdf'))
         merger.append(os.path.join(report_path, f'irp_analysis_{i}.pdf'))

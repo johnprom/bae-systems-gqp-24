@@ -1,7 +1,7 @@
 # Execution flow parameters
-run_preprocess: true # default false
-run_train: true # default false
-run_knee_discovery: true # default false
+# run_preprocess: true # default false
+# run_train: true # default false
+# run_knee_discovery: true # default false
 generate_report: true # default false
 #
 #
@@ -50,7 +50,7 @@ target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time
 #
-preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of
 # Either "tiling" or "padding", reflected by the options in preprocess_methods below
 #
 # Module-specific parameters
@@ -66,7 +66,7 @@ train:
   output_subdir: "results" # REQUIRED FOR TRAIN AND GENERATE_REPORT, subdir for top_dir/<global output_subdir>
   hyperparameters_filename: "hyperparams.csv" # Filename to store the hyperparameters final training, default is "hyperparams.csv"
   fractional_factorial: true  # default false
-  # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in 
+  # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in
   # knee discovery
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
@@ -74,18 +74,23 @@ knee_discovery:
   cache_results: true # Results are cached in memory to improve performance, default false
   use_eval_cache: true # Tells the evaluation method to cache images, TODO: should go into yolov8m section
   # ONLY used if knee_discovery is being run without preprocessing or training
-  eval_results_filename: "iapc_results.csv" # REQUIRED the accumulative results file, must be a csv
+  eval_results_filename: "irpc_results.csv" # REQUIRED the accumulative results file, must be a csv
   clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
   #
-  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  search_resolution_range: [0.1, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
   # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
   # if enabled_feeback is true, then this range is just the initial search
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
-  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
+  search_resolution_step: 0.1 # REQUIRED, the steps for the range above, MUST be a whole divisor of the range
+  knee_resolution_interpolation_divisor: 10 # MUST be a whole number, defaults to 5
+  # defines the knee resolution granularity for interpolation
+  # For example, if the search_resolution_step = 0.05, and knee_resolution_interpolation_divisor is 5,
+  # then the knee resolution granularity is: (search_resolution_step / knee_resolution_interpolation_divisor) = 0.01
+  # Thus, the data for knee discovery will be at a granularity of 0.01
 #
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
@@ -139,16 +144,19 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
     trained_model_filename: "yolov8m/model.pt"
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
     params:
+      cls: 1.5
       # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
       imgsz: 640  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY, TODO: change code for this
       # Controls size of starting feauture map for YOLO. Should be the same value as in preprocessing
       # That is, preprocess_methods:<method>:image_size
-      epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
+      epochs: 100 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-    hyperparameters:
-      cls: [1.0, 1.5]
-      batch: [16]
-      epochs: [50, 100]
+    # hyperparameters:
+    #   imgsz: [640]
+    #   cls: [1.5]
+    #   batch: [256]
+    #   epochs: [1]
+    #   freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
       #lr0: [0.01, 0.005, 0.001]
       #momentum: [0.8, 0.95]

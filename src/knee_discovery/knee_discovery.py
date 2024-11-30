@@ -6,6 +6,7 @@ Created on Tue Oct  1 12:47:32 2024
 @author: dfox
 """
 
+import bisect
 import math
 import numpy as np
 import os
@@ -70,7 +71,7 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
     method = config['preprocess_method']
     preprocess_top_dir = ctxt.get_preprocessing_dir_path()
     val_template = config['preprocess_methods'][method]['val_baseline_subdir']
-    
+
     # maxwidth = config['preprocess_methods'][method]['image_size']
     # maxheight = maxwidth
     maxwidth = orig_image_size[0]
@@ -81,14 +82,14 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
         val_baseline_dir = os.path.join(preprocess_top_dir, val_template.format(maxwidth=maxwidth, maxheight=maxheight))
     elif method == 'tiling':
         stride = config['preprocess_methods'][method]['stride']
-        val_baseline_dir = os.path.join(preprocess_top_dir, 
+        val_baseline_dir = os.path.join(preprocess_top_dir,
                                         val_template.format(maxwidth=maxwidth, maxheight=maxheight, stride=stride))
     else:
         raise ValueError("Unknown preprocessing method: " + method)
 
     # baseline_dir = ctxt.val_baseline_dir
     os.makedirs(degraded_dir, exist_ok=True)
-    
+
     if ctxt.val_image_filename_set is None:
         val_image_filenames = [os.path.join(val_baseline_dir, x) for x in os.listdir(val_baseline_dir) if x.endswith(exts)]
         ctxt.val_image_filename_set = set(val_image_filenames)
@@ -116,7 +117,7 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
 
                         val_shrunk_image = image.resize((this_degraded_width, this_degraded_height))
                         val_degraded_image = val_shrunk_image.resize(this_orig_image_size)
-                        val_degraded_image.save(val_degraded_image_filename) 
+                        val_degraded_image.save(val_degraded_image_filename)
                         image.close()
                         val_shrunk_image.close()
                         val_degraded_image.close()
@@ -128,13 +129,13 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
                     shutil.copyfile(val_label_filename, val_degraded_label_filename)
         else:
             ctxt.val_image_filename_set.discard(val_image_filename)
-        
+
     return num_images, corrupted_counter
 
 def run_eval_on_degraded_images(ctxt):
     """
     Evaluates the model on a range of degraded image resolutions, specified in the configuration,
-    and logs the results. This function systematically reduces image resolution within the range 
+    and logs the results. This function systematically reduces image resolution within the range
     defined by the knee discovery parameters, creating degraded copies and evaluating the model on each.
 
     Args:
@@ -144,7 +145,7 @@ def run_eval_on_degraded_images(ctxt):
         - Retrieves baseline and knee discovery parameters from the pipeline configuration.
         - Iteratively reduces resolution of images in specified steps and evaluates the model on each degraded set.
         - Logs any corrupted images that could not be processed during degradation.
-    
+
     Log Output:
         - Prints status messages if verbosity is enabled, detailing degradation ranges, steps, and corrupted images.
         - Final report of corrupted images if any were encountered during processing.
@@ -163,8 +164,8 @@ def run_eval_on_degraded_images(ctxt):
         stride = pp_params['stride']
     else:
         stride = None
-    
-    
+
+
     longer = max(width, height)
     shorter = min(width, height)
     shorter_mult = shorter / longer
@@ -189,7 +190,7 @@ def run_eval_on_degraded_images(ctxt):
             maxwidth=width, maxheight=height, effective_width=degraded_width, effective_height=degraded_height, stride=stride))
 
         # Degrade images and run evaluation
-        num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, 
+        num_images, corrupted_counter = degrade_images(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir,
                                                        corrupted_counter)
         if max_images == 0:
             max_images = num_images
@@ -197,12 +198,12 @@ def run_eval_on_degraded_images(ctxt):
 
     if corrupted_counter > 0:
         print(f"{corrupted_counter} out of {max_images} images are corrupted!")
-    
+
 
 def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     """
     Calculates the degradation factor based on the original and effective image resolutions.
-    The degradation factor is computed as the square root of the area ratio between the effective 
+    The degradation factor is computed as the square root of the area ratio between the effective
     and original resolutions.
 
     Args:
@@ -210,17 +211,30 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
         orig_res_h (float or pd.Series): Original resolution height.
         eff_res_w (float or pd.Series): Effective resolution width.
         eff_res_h (float or pd.Series): Effective resolution height.
-    
+
     Returns:
         pd.Series: The degradation factor calculated from the resolutions, representing the ratio
                    of effective resolution to original resolution.
     """
-    
+
     degradation_factor_w = eff_res_w / orig_res_w
     degradation_factor_h = eff_res_h / orig_res_h
     degradation_factor_area = degradation_factor_w * degradation_factor_h
     degradation_factor = degradation_factor_area.apply(math.sqrt)
     return degradation_factor # pd.Series
+
+def find_interp_range_indicies(x_array, x, granularity):
+    for idx, value in enumerate(x_array):
+        if abs(value - x) <= granularity:
+            return idx, idx
+    idx = bisect.bisect_right(x_array, x)
+    if idx == (len(x) - 1) or idx == 0:
+        return idx, idx
+    elif idx >= len(x):
+        raise ValueError("find_interp_range(): x > any value in x_array")
+    else:
+        return idx, (idx - 1)
+
 
 def calculate_knee(ctxt, class_name, results_class_df):
     """
@@ -230,7 +244,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
     Args:
         ctxt: The pipeline context object containing configuration and verbosity settings.
         class_name (str): Name of the class for which the knee is being calculated.
-        results_class_df (pd.DataFrame): DataFrame with columns 'original_resolution_width', 
+        results_class_df (pd.DataFrame): DataFrame with columns 'original_resolution_width',
                                          'original_resolution_height', 'effective_resolution_width',
                                          'effective_resolution_height', and 'mAP' for the given class.
 
@@ -283,16 +297,29 @@ def calculate_knee(ctxt, class_name, results_class_df):
     y_array = np.array(y_sorted)
 
     # Apply spline interpolation to smooth the data
-    interp_granularity = 0.01 # TODO: make configurable
+    config = ctxt.get_pipeline_config()
+    knee_resolution_divisor, knee_step = ctxt.get_knee_resolution()
+    if ctxt.verbose:
+        print(f"knee_resolution_divisor {knee_resolution_divisor}")
+        print(f"knee_step {knee_step}")
+
+
     try:
         start = x_array.min()
         stop = x_array.max()
-        num_interpolation_points = int((math.ceil((stop - start) / interp_granularity)) + 1) # You can adjust this number as needed
+        num_data_points = len(x_array)
+        # num_interpolation_points = int((math.ceil((stop - start) / interp_granularity)) + 1) # You can adjust this number as needed
+        num_interpolation_points = (num_data_points - 1) * knee_resolution_divisor + 1
         if ctxt.verbose:
+            print(f"num_data_points {num_data_points}")
             print(f"num_interpolation_points {num_interpolation_points}")
-        x_interp = np.linspace(start, stop, num=num_interpolation_points)
-        spline = make_interp_spline(x_array, y_array, k=3)  # Cubic spline
-        y_interp = spline(x_interp)
+        if num_interpolation_points > 0:
+            x_interp = np.linspace(start, stop, num=num_interpolation_points)
+            spline = make_interp_spline(x_array, y_array, k=3)  # Cubic spline
+            y_interp = spline(x_interp)
+        else:
+            x_interp = x_array
+            y_interp = y_array
     except Exception as e:
         if ctxt.verbose:
             print(f"Spline interpolation failed for class {class_name}: {e}")
@@ -303,8 +330,29 @@ def calculate_knee(ctxt, class_name, results_class_df):
         pwlf = PiecewiseLinFit(x_interp, y_interp)
         breaks = pwlf.fit(2)
         knee_x = breaks[1]
-        knee_x = math.ceil(knee_x / interp_granularity) * interp_granularity
-        knee_y = pwlf.predict([knee_x])[0]
+        interp_granularity = knee_step / knee_resolution_divisor
+        tolearance = interp_granularity / 100
+        x_high_idx, x_low_idx = find_interp_range_indicies(x_array, knee_x, tolearance)
+        if ctxt.verbose:
+            print(f"x_high_idx {x_high_idx}, x_low_idx {x_low_idx}")
+            print(f"knee_x {knee_x}, tolerance {tolearance}")
+            print(f"x_array:")
+            print(f"  {x_array}")
+        # idx_high, idx_low = find_interp_indicies
+        # x_high = math.ceil(knee_x / knee_step) * knee_step
+        # x_low = math.floor(knee_x / knee_step) * knee_step
+        if x_high_idx == x_low_idx:
+            knee_y = y_array[x_high_idx]
+        else:
+            y0 = y_array[x_low_idx]
+            x0 = x_array[x_low_idx]
+            y1 = y_array[x_high_idx]
+            x1 = x_array[x_high_idx]
+            knee_y = y0 + (knee_x - x0) * ((y1 - y0) / (x1 - x0))
+            if ctxt.verbose:
+                print("x0 {x0}, x1 {x1}, y0 {y0}, y1 {y1}, knee_y {knee_y}")
+        if ctxt.verbose:
+            print("knee_x {knee_x} knee_y {knee_y}")
 
         # Find the index of the knee point in the interpolated data
         # knee_index = np.argmin(np.abs(x_interp - knee_x))
@@ -328,13 +376,13 @@ def calculate_knee(ctxt, class_name, results_class_df):
             print(f"Piecewise linear fit failed for class {class_name}: {e}")
         return [], []
 
-        
+
 def run_knee_discovery(ctxt):
     """
-    Runs the knee discovery process to identify optimal image resolutions at which model performance 
-    (mean Average Precision, mAP) experiences a significant change. This process iteratively degrades 
+    Runs the knee discovery process to identify optimal image resolutions at which model performance
+    (mean Average Precision, mAP) experiences a significant change. This process iteratively degrades
     image resolution, evaluates the model, and identifies knee points in the performance curve.
-    
+
     Args:
         ctxt: The pipeline context object containing configurations, paths, and verbosity settings.
 
@@ -343,8 +391,8 @@ def run_knee_discovery(ctxt):
         - Runs evaluation on initial degraded resolutions to populate a baseline.
         - Loads or calculates degradation factors for each resolution.
         - Iterates over each class to identify the knee point in the degradation curve.
-            - If a binary search algorithm is specified, it refines the knee point by iterating over nearby 
-              degradation factors until convergence is achieved within a specified tolerance or a maximum 
+            - If a binary search algorithm is specified, it refines the knee point by iterating over nearby
+              degradation factors until convergence is achieved within a specified tolerance or a maximum
               number of iterations.
             - Uses piecewise linear fitting to identify knee points and logs details if verbosity is enabled.
             - Calls `update_knee_results` to store the knee point in the context.
@@ -358,7 +406,7 @@ def run_knee_discovery(ctxt):
         None
     """
     print("Start with run_knee_discovery")
-    
+
     config = ctxt.get_pipeline_config()
     output_top_dir = ctxt.get_output_dir_path()
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
@@ -382,7 +430,7 @@ def run_knee_discovery(ctxt):
             print(f"Knee discovery: {eval_results_filename} not found!")
             return
 
-    ## Ensure degradation_factor is calculated
+    # Ensure degradation_factor is calculated
     if 'degradation_factor' not in results_df.columns:
         orig_res_w = results_df['original_resolution_width'].astype(float)
         orig_res_h = results_df['original_resolution_height'].astype(float)
