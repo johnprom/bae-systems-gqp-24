@@ -227,8 +227,15 @@ Reporting Test Outcomes: Upon completion of the comparison, the regression test 
 The regression testing framework thus plays a vital role in our pipeline, enabling consistent and reliable performance across iterations while accommodating intentional changes. By providing detailed feedback on specific differences and ensuring critical outputs are generated, the regression tests help maintain the robustness of optimal resolution detection. This layer of automated validation is particularly valuable for projects like ours, where precision in image processing and model outputs is crucial for practical deployment.
 
 ## irpc_results.csv 
-TODO - what is the format
+To help the user make sense of the pipeline results, the irpc_results.csv file is included in the output. This file summarizes the key performance metrics and configurations as follows:
+Original Resolution: Displays the original resolution's width and height. These values serve as the baseline when fine-tuning the YOLO model. 
+Effective Resolution: Shows the degraded resolution's width and height. These values are used to evaluate the model's performance on the degraded evaluation images. 
+mAP: Stands for mean average precision. This metric measures the accuracy of the model by evaluating how well it predicts bounding boxes and classifies objects.
+Degradation Factor: Represents the effective resolution as a fraction of the original resolution. (e.g., 0.5 if the resolution is halved).
+GSD: Stands for the ground sampling distance. It indicates the the distance between the centers of two consecutive pixels on the ground, typically in meters. 
+Pixels on Target: Indicates the number of pixels covering the target object. This value typically increases as the image resolution improves.
+Knee: A boolean value indicating whether a knee point (a significant drop in performance) has been detected at the current degradation level.
 
 ## hyperparams.csv
-TODO - What is the format
+Similar to irpc_results.csv, the hyperparms.csv file is designed to clearly document the hyperparameters used to fine-tune the model. This file highlights the configuration that achieved the best performance. 
 
