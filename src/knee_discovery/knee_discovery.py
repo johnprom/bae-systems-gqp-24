@@ -12,6 +12,8 @@ import os
 import pandas as pd
 from pathlib import Path
 import shutil
+from pwlf import PiecewiseLinFit
+from scipy.interpolate import make_interp_spline
 
 # Removed import of KneeLocator since we're replacing it
 # from kneed import KneeLocator
@@ -106,8 +108,14 @@ def degrade_images(ctxt, orig_image_size, degraded_image_size, degraded_dir, cor
                 else:
                     try:
                         image = Image.open(val_image_filename)
-                        val_shrunk_image = image.resize(degraded_image_size)
-                        val_degraded_image = val_shrunk_image.resize(orig_image_size)
+                        this_orig_image_size = image.size
+                        this_degraded_width = int(math.ceil((degraded_image_size[0] / orig_image_size[0])
+                                                            * this_orig_image_size[0]))
+                        this_degraded_height = int(math.ceil((degraded_image_size[1] / orig_image_size[1])
+                                                             * this_orig_image_size[1]))
+
+                        val_shrunk_image = image.resize((this_degraded_width, this_degraded_height))
+                        val_degraded_image = val_shrunk_image.resize(this_orig_image_size)
                         val_degraded_image.save(val_degraded_image_filename) 
                         image.close()
                         val_shrunk_image.close()
@@ -185,7 +193,7 @@ def run_eval_on_degraded_images(ctxt):
                                                        corrupted_counter)
         if max_images == 0:
             max_images = num_images
-        run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir, "unknown")
+        run_eval(ctxt, (width, height), (degraded_width, degraded_height), val_degraded_dir)
 
     if corrupted_counter > 0:
         print(f"{corrupted_counter} out of {max_images} images are corrupted!")
@@ -240,10 +248,6 @@ def calculate_knee(ctxt, class_name, results_class_df):
         - Calls `update_knee_results` to store the knee point in the context.
 
     """
-    import numpy as np
-    import pandas as pd
-    from pwlf import PiecewiseLinFit
-    from scipy.interpolate import make_interp_spline
 
     # Get degradation factors and mAP values
     orig_res_w = results_class_df['original_resolution_width'].astype(float)
@@ -265,6 +269,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
     # Filter out mAP values <= threshold
     filtered_data = [(d, m, w, h) for d, m, w, h in zip(degradation_factor_list, mAP_values, width_list, height_list) if m > threshold]
+    # filtered_data = [(d, m, w, h) for d, m, w, h in zip(degradation_factor_list, mAP_values, width_list, height_list)]
     if len(filtered_data) < 2:
         return [], []
     x_list, y_list, w_list, h_list = zip(*filtered_data)
@@ -278,9 +283,14 @@ def calculate_knee(ctxt, class_name, results_class_df):
     y_array = np.array(y_sorted)
 
     # Apply spline interpolation to smooth the data
+    interp_granularity = 0.01 # TODO: make configurable
     try:
-        num_interpolation_points = 96 # You can adjust this number as needed
-        x_interp = np.linspace(x_array.min(), x_array.max(), num=num_interpolation_points)
+        start = x_array.min()
+        stop = x_array.max()
+        num_interpolation_points = int((math.ceil((stop - start) / interp_granularity)) + 1) # You can adjust this number as needed
+        if ctxt.verbose:
+            print(f"num_interpolation_points {num_interpolation_points}")
+        x_interp = np.linspace(start, stop, num=num_interpolation_points)
         spline = make_interp_spline(x_array, y_array, k=3)  # Cubic spline
         y_interp = spline(x_interp)
     except Exception as e:
@@ -293,10 +303,11 @@ def calculate_knee(ctxt, class_name, results_class_df):
         pwlf = PiecewiseLinFit(x_interp, y_interp)
         breaks = pwlf.fit(2)
         knee_x = breaks[1]
+        knee_x = math.ceil(knee_x / interp_granularity) * interp_granularity
         knee_y = pwlf.predict([knee_x])[0]
 
         # Find the index of the knee point in the interpolated data
-        knee_index = np.argmin(np.abs(x_interp - knee_x))
+        # knee_index = np.argmin(np.abs(x_interp - knee_x))
 
         # Map back to the closest original resolution for logging and updating results
         original_index = np.argmin(np.abs(x_array - knee_x))
@@ -305,6 +316,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
         if ctxt.verbose:
             print(f"Knee found at degradation factor {knee_x} with mAP {knee_y} for class {class_name}")
+            # print(f"Knee found at degradation factor {knee_x} for class {class_name}")
 
         # Update the knee results
         update_knee_results(ctxt, class_name, (w_knee, h_knee), knee_x, knee_y)
@@ -356,7 +368,7 @@ def run_knee_discovery(ctxt):
         os.remove(eval_results_filename)
 
     os.makedirs(results_path, exist_ok=True)
-    
+
     # Run evaluation on initial (baseline) resolutions
     run_eval_on_degraded_images(ctxt)
 
@@ -366,7 +378,7 @@ def run_knee_discovery(ctxt):
     else:
         if os.path.exists(eval_results_filename):
             results_df = pd.read_csv(eval_results_filename, index_col=False)
-        else: 
+        else:
             print(f"Knee discovery: {eval_results_filename} not found!")
             return
 
@@ -388,5 +400,5 @@ def run_knee_discovery(ctxt):
     for class_name in class_names:
         results_class_df = results_df[results_df['object_name'] == class_name].copy()
         _, _ = calculate_knee(ctxt, class_name, results_class_df)
-        
+
     print("End knee discovery")

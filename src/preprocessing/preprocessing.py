@@ -115,34 +115,12 @@ def run_preprocessing(ctxt):
     
     filter_classes(ctxt, list(config['target_labels'].keys()))
 
-    preprocess_top_dir = ctxt.get_preprocessing_dir_path()
-    method = ctxt.config['preprocess_method'] # Currently 'padding' or 'tiling'
-    
-    params = ctxt.config['preprocess_methods'][method]
-    train_template = params['train_baseline_subdir']
-    val_template = params['val_baseline_subdir']
-    
     method = config['preprocess_method'] # Currently 'padding' or 'tiling'
 
     # Method-specific code    
     # use ctxt.interim_images_dir to temporarily place preprocessed files prior to train_test_split
-    if method == 'padding':
-        ctxt.maxwidth, ctxt.maxheight = padding_and_annotation_adjustment(ctxt) 
-        ctxt.train_baseline_dir = os.path.join(preprocess_top_dir, train_template.format(maxwidth=ctxt.maxwidth, 
-                                                                                         maxheight=ctxt.maxheight))
-        ctxt.val_baseline_dir = os.path.join(preprocess_top_dir, val_template.format(maxwidth=ctxt.maxwidth, 
-                                                                                     maxheight=ctxt.maxheight))
-    elif method == 'tiling':
+    if method == 'tiling':
         tiling(ctxt)
-        image_size = params['image_size']
-        ctxt.maxwidth = image_size
-        ctxt.maxheight = image_size
-        stride = params['stride']
-        ctxt.train_baseline_dir = os.path.join(preprocess_top_dir, 
-                                               train_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, 
-                                                                     stride=stride))
-        ctxt.val_baseline_dir = os.path.join(preprocess_top_dir, 
-                                             val_template.format(maxwidth=ctxt.maxwidth, maxheight=ctxt.maxheight, stride=stride))
     else:
         raise ValueError("Unknown preprocessing method: " + method)
 

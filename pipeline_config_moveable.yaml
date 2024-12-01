@@ -1,7 +1,7 @@
 ## Execution flow parameters
-# run_preprocess: true # default false
-# run_train: true # default false
-# run_knee_discovery: true # default false
+run_preprocess: true # default false
+run_train: true # default false
+run_knee_discovery: true # default false
 generate_report: true # default false
 #
 #
@@ -126,7 +126,8 @@ knee_discovery:
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
   clean_subdir: false # wipes out the reports output_subdir
-  # report_filename: 'generated_report.pdf'
+  report_filename: 'generated_report.pdf'
+  curves_per_graph: 3
 #
 #
 # Supported reprocessing methods parameters
@@ -170,7 +171,7 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
     pretrained: # Specifies use of a pretrained model
       library: "ultralytics" # not used, here for reference
       trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
-    trained_model_filename: "yolov8m/model_{hashed_params}.pt"
+    trained_model_filename: "yolov8m/model.pt"
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
     params:
       # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY

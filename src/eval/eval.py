@@ -51,15 +51,29 @@ def drop_dup_results(ctxt, rcdf):
         pd.DataFrame: A DataFrame with duplicate rows removed based on the unique key.
     """
     temp_rcdf = rcdf.copy()
+    # first put all knees last
+    knee_rcdf = temp_rcdf[temp_rcdf['knee'] == True].reset_index(drop=True)
+    temp_rcdf = pd.concat([temp_rcdf, knee_rcdf]).reset_index(drop=True)
     # temp_rcdf['mAP_rounded'] = temp_rcdf['mAP'].round(3)  # Adjust the decimal places as needed
     temp_rcdf['key'] = (temp_rcdf['object_name'] + '_' + temp_rcdf['original_resolution_width'].astype(str) + '_'
                         + temp_rcdf['original_resolution_height'].astype(str) + '_'
-                        + temp_rcdf['degradation_factor'].round(6).astype(str))
-    temp_rcdf = temp_rcdf.drop_duplicates(subset='key', keep='last')
+                        + temp_rcdf['effective_resolution_width'].astype(str) + '_'
+                        + temp_rcdf['effective_resolution_height'].astype(str))
+
+    # keep mAP of first duplicate
+    mAP_dict = {}
+    for index, row in temp_rcdf.iterrows():
+        key = row['key']
+        if key not in mAP_dict:
+            mAP_dict[key] = row['mAP']
+        else:
+            temp_rcdf.at[index, 'mAP'] = mAP_dict[key]
+
+    temp_rcdf = temp_rcdf.drop_duplicates(subset='key', keep='last').reset_index(drop=True)
     temp_rcdf = temp_rcdf.drop('key', axis=1)
     return temp_rcdf
 
-def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_size, mAP_list, is_knee):
+def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_size, mAP_list):
     """
     Logs evaluation results (mAP and image sizes) for knee discovery.
 
@@ -106,14 +120,19 @@ def update_results(ctxt, num_names, name_list, orig_image_size, degraded_image_s
         class_pixel_area = ctxt.object_sizes.get(name_list[idx], 1)
         pixels_on_target = math.ceil((original_gsd ** 2) * class_pixel_area / (gsd_per_pixel ** 2))
 
+        orig_width = math.ceil(orig_image_size[0])
+        orig_height = math.ceil(orig_image_size[1])
+        degraded_width = math.ceil(degraded_image_size[0])
+        degraded_height = math.ceil(degraded_image_size[1])
+
         # degradation_factor = calc_degradation_factor(orig_image_size, orig_image_size, degraded_image_size, degraded_image_size)
         # rcdf_list = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
         #                            degraded_image_size[1], mAP_list[idx], degradation_factor, is_knee]
-        rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_image_size[0], orig_image_size[1], degraded_image_size[0], 
-                                   degraded_image_size[1], mAP_list[idx], degradation_factor, gsd_per_pixel, pixels_on_target, is_knee]
+        rcdf.loc[rcdf.shape[0]] = [name_list[idx], orig_width, orig_height, degraded_width, degraded_height,
+                                    mAP_list[idx], degradation_factor, gsd_per_pixel, pixels_on_target, False]
         if ctxt.verbose:
             print(f"Logged IAPC results: Object class {name_list[idx]}, Original {orig_image_size}, Degraded {degraded_image_size}, "
-                  + f"mAP {mAP_list[idx]}, knee {is_knee}")
+                  + f"mAP {mAP_list[idx]}, knee False")
     
     
     rcdf = drop_dup_results(ctxt, rcdf)
@@ -158,6 +177,8 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     else:
         rcdf = pd.DataFrame(columns=ctxt.iapc_columns)
         
+    orig_width = math.ceil(orig_image_size[0])
+    orig_height = math.ceil(orig_image_size[1])
     degraded_width = math.ceil(orig_image_size[0] * degradation_factor)
     degraded_height = math.ceil(orig_image_size[1] * degradation_factor)
 
@@ -167,15 +188,14 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
     class_pixel_area = ctxt.object_sizes.get(name, 1)
     pixels_on_target = math.ceil((original_gsd ** 2) * class_pixel_area / (gsd_per_pixel ** 2))
 
-    rcdf.loc[rcdf.shape[0]] = [name, orig_image_size[0], orig_image_size[1], degraded_width, 
-                               degraded_height, mAP, degradation_factor, gsd_per_pixel, pixels_on_target, True]
+    rcdf.loc[rcdf.shape[0]] = [name, orig_width, orig_height, degraded_width, degraded_height, mAP, degradation_factor,
+                               gsd_per_pixel, pixels_on_target, True]
     
     # rcdf = rcdf.sort_values(['object_name', 'degradation_factor'])
     
     if ctxt.verbose:
         print(f"Logged IAPC results: Object class {name}, Original {orig_image_size}, "
-              + f"Degraded ({degraded_width}, {degraded_height}), mAP {mAP}, knee True")
-    
+              + f"Degraded ({degraded_width}, {degraded_height}), mAP {mAP}, knee True", flush=True)
     
     rcdf = drop_dup_results(ctxt, rcdf)
     rcdf.to_csv(eval_results_filename, index=False)
@@ -203,7 +223,7 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     # IAPC_df['degradation_factor'] = degradation_factor
     return degradation_factor # pd.Series
 
-def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path, knee):
+def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_path):
     """
     Runs the model evaluation at a specific resolution and calculates mAP.
 
@@ -227,6 +247,8 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
         print(f"Couldn't find final weights path {ctxt.final_weights_path}, using pretrained weights", flush=True)
         model_to_use = ctxt.get_model_name()
     else:
+        if ctxt.verbose:
+            print(f"Using final weights path {ctxt.final_weights_path}", flush=True)
         model_to_use = ctxt.final_weights_path
     model = YOLO(model_to_use)
     if ctxt.use_cuda:
@@ -240,8 +262,6 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     os.makedirs(results_path, exist_ok=True)
     
     run_name = f"val_{degraded_image_size[0]}_{degraded_image_size[1]}"
-    if isinstance(knee, bool) and knee:
-        run_name += "_knee"
 
     # Run evaluation
     results = model.val(data=data_config_path, imgsz=list(baseline_image_size), cache=ctxt.use_eval_cache(),
@@ -249,14 +269,12 @@ def run_eval(ctxt, baseline_image_size, degraded_image_size, val_degraded_dir_pa
     
     # Retrieve mAP from the evaluation results
     mAP_list = list(results.box.maps)  # Access mAP for object detection
-    if ctxt.verbose:
-        print(mAP_list)
     
     # if all mAP are zero, return any value from degradation factor list, let's pick the minimum
     if len(mAP_list) == 0:
         mAP_list = [0.0] * len(model.names)
 
     # log results to a structured file 
-    update_results(ctxt, data_config['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list, knee)
+    update_results(ctxt, data_config['nc'], model.names, baseline_image_size, degraded_image_size, mAP_list)
     
     # return mAP_list  # no need to return this

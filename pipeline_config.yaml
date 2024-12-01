@@ -72,7 +72,7 @@ knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
   # clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
   cache_results: true # Results are cached in memory to improve performance, default false
-  use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
+  use_eval_cache: true # Tells the evaluation method to cache images, TODO: should go into yolov8m section
   # ONLY used if knee_discovery is being run without preprocessing or training
   eval_results_filename: "iapc_results.csv" # REQUIRED the accumulative results file, must be a csv
   clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
@@ -86,14 +86,11 @@ knee_discovery:
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
   search_resolution_step: 0.05 # REQUIRED, the steps for the range above
-  # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
-  # example of range to be searched from above given a 640x640 original resolution
-  # again, note that 640x640 would always be searched regardless
-  # search_algorithm: 'binary'
 #
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
   clean_subdir: false # wipes out the reports output_subdir
+  curves_per_graph: 3 # number of curves on each displayed graph, default is 5
 #
 #
 # Supported reprocessing methods parameters
@@ -139,7 +136,7 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
     pretrained: # Specifies use of a pretrained model
       library: "ultralytics" # not used, here for reference
       trained_name: "yolov8m" # pretrained model name specific to models:pretrained:libraray
-    trained_model_filename: "yolov8m/model_{hashed_params}.pt"
+    trained_model_filename: "yolov8m/model.pt"
     # filename of fine-tuned trained model, not required if not fine-tuning a pretrained model
     params:
       # input_image_size: [640, 640]  # REQUIRED FOR TRAINING/FINE-TUNING AND KNEE DISCOVERY
