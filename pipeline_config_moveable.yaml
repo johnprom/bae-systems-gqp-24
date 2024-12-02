@@ -44,7 +44,6 @@ pixel_size: 0.3 # in meters
 
 # Target labels for detection
 target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
-<<<<<<< HEAD
     11: 'Fixed-wing Aircraft'
     12: 'Small Aircraft'
     13: 'Cargo Plane'
