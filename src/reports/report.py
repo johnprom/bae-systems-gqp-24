@@ -64,6 +64,8 @@ def display_table(df, intro_text, page_units_used, precision_dict, output_filena
     # num_lines = df.shape[0]
     pdf = FPDF()
 
+    pdf.set_fill_color(200, 220, 255)
+
     # page_units_used += (cell_height * num_lines)
     # if page_units_used >= 250:
     pdf.add_page()
@@ -99,7 +101,7 @@ def display_table(df, intro_text, page_units_used, precision_dict, output_filena
         # cell_header_width = 2*len(this_header)
         # cell_max_value_width = 2*max(list(width_dict[cell_header]))
         # cell_width = max(cell_header_width, cell_max_value_width)
-        pdf.cell(width_dict[cell_header], cell_height, txt=header_to_readable[cell_header], border=1, align='C')
+        pdf.cell(width_dict[cell_header], cell_height, txt=header_to_readable[cell_header], border=1, align='C', fill=True)
     pdf.ln(cell_height)
     for idx, row in df.iterrows():
         for cell_header in df:
@@ -297,19 +299,27 @@ def generate_report(ctxt):
 
     graph_array = []
     curve_array = []
+    print("got here 1")
     i = 0
+    print(ctxt.report_names)
     for object_name in sorted_objects:
+        print(object_name)
         if object_name in ctxt.report_names:
+            print(object_name, ctxt.report_names)
             if (i % num_curves_per_graph) == 0:
+                print(i)
                 if i != 0:
+                    print(curve_array)
                     graph_array.append(curve_array)
                 curve_array = []
             curve_array.append(object_name)
+            print(curve_array)
             i += 1
     if len(curve_array) > 0:
         graph_array.append(curve_array)
 
     num_graphs = len(graph_array)
+    print(graph_array)
     for g_i, curve_array in enumerate(graph_array):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
@@ -351,10 +361,13 @@ def generate_report(ctxt):
 
 
         plt.grid(True)
+        print("About to save report curves")
         plt.savefig(os.path.join(report_path, f'irp_curves_{g_i}.pdf'))
         plt.close()
 
         pdf = FPDF()
+
+        pdf.set_fill_color(200, 220, 255)
 
         pdf.add_page()
         pdf.set_font("Times", size=11) # Times Roman
@@ -394,7 +407,7 @@ def generate_report(ctxt):
                         cell_width = 24
                     else:
                         cell_width = 2*len(this_header)
-                    pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C')
+                    pdf.cell(cell_width, cell_height, txt=this_header, border=1, align='C', fill=True)
             pdf.ln(cell_height)
             for idx, row in object_data_IRPC.iterrows():
                 for cell_header in object_data_IRPC:
@@ -432,6 +445,7 @@ def generate_report(ctxt):
             txt = f"    Knee: {knee_type_to_readable[True]} if the data point is a knee, {knee_type_to_readable[False]} if not"
             pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             first_page = False
+        print("About to output anlysis")
         pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
 
     merger = PdfMerger()

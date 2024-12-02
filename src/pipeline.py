@@ -135,7 +135,7 @@ class Pipeline:
         """
         if 'input_dir' in self.config:
             return self.config['input_dir']
-        return os.path.join(self.get_top_dir(), 'xview_dataset_raw')
+        return self.get_top_dir()
 
     def get_data_config_dir_path(self):
         """

@@ -228,9 +228,9 @@ def find_interp_range_indicies(x_array, x, granularity):
         if abs(value - x) <= granularity:
             return idx, idx
     idx = bisect.bisect_right(x_array, x)
-    if idx == (len(x) - 1) or idx == 0:
+    if idx == 0:
         return idx, idx
-    elif idx >= len(x):
+    elif idx >= len(x_array):
         raise ValueError("find_interp_range(): x > any value in x_array")
     else:
         return idx, (idx - 1)
@@ -298,7 +298,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
     # Apply spline interpolation to smooth the data
     config = ctxt.get_pipeline_config()
-    knee_resolution_divisor, knee_step = ctxt.get_knee_resolution()
+    knee_resolution_divisor, knee_step = ctxt.get_knee_resolution_divisor()
     if ctxt.verbose:
         print(f"knee_resolution_divisor {knee_resolution_divisor}")
         print(f"knee_step {knee_step}")

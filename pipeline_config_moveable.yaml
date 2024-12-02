@@ -36,54 +36,72 @@ trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING, s
 pixel_size: 0.3 # in meters
 
 target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
-   11: "Fixed-wing Aircraft"
-   12: "Small Aircraft"
-   13: "Cargo Plane"
-   15: "Helicopter"
-   17: "Passenger Vehicle"
-   18: "Small Car"
-   19: "Bus"
-   20: "Pickup Truck"
-   21: "Utility Truck"
-   23: "Truck"
-   24: "Cargo Truck"
-   25: "Truck w/Box"
-   26: "Truck Tractor"
-   27: "Trailer"
-   28: "Truck w/Flatbed"
-   29: "Truck w/Liquid"
-   32: "Crane Truck"
-   33: "Railway Vehicle"
-   34: "Passenger Car"
-   35: "Cargo Car"
-   36: "Flat Car"
-   37: "Tank car"
-   38: "Locomotive"
-   40: "Maritime Vessel"
-   41: "Motorboat"
-   42: "Sailboat"
-   44: "Tugboat"
-   45: "Barge"
-   47: "Fishing Vessel"
-   49: "Ferry"
-   50: "Yacht"
-   51: "Container Ship"
-   52: "Oil Tanker"
-   53: "Engineering Vehicle"
-   54: "Straddle Carrier"
-   60: "Dump Truck"
-   61: "Haul Truck"
-   62: "Scraper/Tractor"
-   63: "Front loader/Bulldozer"
-   64: "Excavator"
-   65: "Cement Mixer"
-   66: "Ground Grader"   
+    11: 'Fixed-wing Aircraft'
+    12: 'Small Aircraft'
+    13: 'Cargo Plane'
+    15: 'Helicopter'
+    17: 'Passenger Vehicle'
+    18: 'Small Car'
+    19: 'Bus'
+    20: 'Pickup Truck'
+    21: 'Utility Truck'
+    23: 'Truck'
+    24: 'Cargo Truck'
+    25: 'Truck w/Box'
+    26: 'Truck Tractor'
+    27: 'Trailer'
+    28: 'Truck w/Flatbed'
+    29: 'Truck w/Liquid'
+    32: 'Crane Truck'
+    33: 'Railway Vehicle'
+    34: 'Passenger Car'
+    35: 'Cargo Car'
+    36: 'Flat Car'
+    37: 'Tank Car'
+    38: 'Locomotive'
+    40: 'Maritime Vessel'
+    41: 'Motorboat'
+    42: 'Sailboat'
+    44: 'Tugboat'
+    45: 'Barge'
+    47: 'Fishing Vessel'
+    49: 'Ferry'
+    50: 'Yacht'
+    51: 'Container Ship'
+    52: 'Oil Tanker'
+    53: 'Engineering Vehicle'
+    54: 'Tower crane'
+    55: 'Container Crane'
+    56: 'Reach Stacker'
+    57: 'Straddle Carrier'
+    59: 'Mobile Crane'
+    60: 'Dump Truck'
+    61: 'Haul Truck'
+    62: 'Scraper/Tractor'
+    63: 'Front loader/Bulldozer'
+    64: 'Excavator'
+    65: 'Cement Mixer'
+    66: 'Ground Grader'
+    71: 'Hut/Tent'
+    # 72: 'Shed'
+    # 73: 'Building'
+    # 74: 'Aircraft Hangar'
+    # 76: 'Damaged Building'
+    # 77: 'Facility'
+    # 79: 'Construction Site'
+    # 83: 'Vehicle Lot'
+    # 84: 'Helipad'
+    # 86: 'Storage Tank'
+    # 89: 'Shipping container lot'
+    91: 'Shipping Container'
+    # 93: 'Pylon'
+    # 94: 'Tower'
 
 # #
 # eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
 # only "detection" is supporeted at this time
 #
-preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of 
+preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of
 # Either "tiling" or "padding", reflected by the options in preprocess_methods below
 #
 # Module-specific parameters
@@ -98,7 +116,7 @@ train:
   #
   output_subdir: "results" # REQUIRED FOR TRAIN AND GENERATE_REPORT, subdir for top_dir/<global output_subdir>
   hyperparameters_filename: "hyperparams.csv" # Filename to store the hyperparameters final training, default is "hyperparams.csv"
-  # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in 
+  # File is routed in knee_disocvery:output_subdir # TODO: allow configuration of results directory to be global, not in
   # knee discovery
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
@@ -106,7 +124,7 @@ knee_discovery:
   cache_results: true # Results are cached in memory to improve performance, default false
   use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
   # ONLY used if knee_discovery is being run without preprocessing or training
-  eval_results_filename: "iapc_results.csv" # REQUIRED the accumulative results file, must be a csv
+  eval_results_filename: "irpc_results.csv" # REQUIRED the accumulative results file, must be a csv
   clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
@@ -118,10 +136,15 @@ knee_discovery:
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
   search_resolution_step: 0.05 # REQUIRED, the steps for the range above
-  # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)] 
+  # search_grid: [(544, 544), (576, 576), (608, 608) (640, 640)]
   # example of range to be searched from above given a 640x640 original resolution
   # again, note that 640x640 would always be searched regardless
   # search_algorithm: 'binary'
+  knee_resolution_interpolation_divisor: 5 # MUST be a whole number, defaults to 5
+  # defines the knee resolution granularity for interpolation
+  # For example, if the search_resolution_step = 0.05, and knee_resolution_interpolation_divisor is 5,
+  # then the knee resolution granularity is: (search_resolution_step / knee_resolution_interpolation_divisor) = 0.01
+  # Thus, the knee will be found to a granularity of 0.01
 #
 report:
   output_subdir: "reports" # REQUIRED FOR GENERATING REPORT, subdir under global output_dir, which is subdir of top_dir
@@ -149,6 +172,8 @@ preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be spe
     output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
     # REQUIRED FOR TILING METHOD
     #
+    train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
+    val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
   padding:  # User-specified method name (can be any string)
     padsize: "max_square" # size of padding in (width, height) or "max_square" which is the maximum square value of the dataset
     # default is "max_square", currently only "max_square" required, so this parameter is never referenced
@@ -181,3 +206,10 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
       epochs: 50 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    hyperparameters:
+      imgsz: [640]
+      batch: [16]
+      epochs: [50]
+      freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
+      # lr0: [0.01, 0.005, 0.001]
+      # momentum: [0.8, 0.95]

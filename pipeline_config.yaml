@@ -1,7 +1,7 @@
 # Execution flow parameters
-# run_preprocess: true # default false
-# run_train: true # default false
-# run_knee_discovery: true # default false
+run_preprocess: true # default false
+run_train: true # default false
+run_knee_discovery: true # default false
 generate_report: true # default false
 #
 #
@@ -79,13 +79,13 @@ knee_discovery:
   # enable_feedback: false  # Enables feedback loop, if set to false only the initial search grid is covered
   # Defines the initial search grid for degrading and inference. Default is false
   #
-  search_resolution_range: [0.1, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
+  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   # 2nd value is end of the range not inclusive, so every value BEFORE 2nd value is searched, and 2nd value is NOT searched
   # Note, however, that the original resolution (1.0) is ALWAYS searched regardless
   # if enabled_feeback is true, then this range is just the initial search
   # in enabled_feedback is false, then this range of values are the only ones searched
   #
-  search_resolution_step: 0.1 # REQUIRED, the steps for the range above, MUST be a whole divisor of the range
+  search_resolution_step: 0.05 # REQUIRED, the steps for the range above, MUST be a whole divisor of the range
   knee_resolution_interpolation_divisor: 10 # MUST be a whole number, defaults to 5
   # defines the knee resolution granularity for interpolation
   # For example, if the search_resolution_step = 0.05, and knee_resolution_interpolation_divisor is 5,
@@ -152,11 +152,11 @@ models: # REQUIRED FOR TRAINING AND KNEE DISCOVERY, at least one model MUST be s
       epochs: 100 # REQUIRED FOR TRAINING/FINE-TUNING, number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-    # hyperparameters:
-    #   imgsz: [640]
-    #   cls: [1.5]
-    #   batch: [256]
-    #   epochs: [1]
-    #   freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
+    hyperparameters:
+      imgsz: [640]
+      cls: [1.5]
+      batch: [16]
+      epochs: [100]
+      freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
       #lr0: [0.01, 0.005, 0.001]
       #momentum: [0.8, 0.95]
