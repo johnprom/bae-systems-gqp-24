@@ -1,0 +1,85 @@
+# Execution flow parameters
+run_preprocess: false  # Set to false since the validation data is already prepared
+run_train: true
+run_knee_discovery: true
+generate_report: true
+
+# Global parameters
+data_config_filename: "data_config.yaml"
+input_images_subdir: "validation_set/images"  # Adjusted to point to validation images
+interim_images_subdir: "interim"
+input_images_labels_filename: "validation_set/annotations/xView_train_filtered.geojson"  # Adjusted to validation annotations
+input_class_labels_filename: "validation_set/annotations/xview_class_labels.json"  # Adjusted to validation class labels
+output_subdir: "output_validation"  # Adjusted output directory
+model: "yolov8m"
+use_cuda: true
+trained_models_subdir: "finetuned_models_validation"  # Adjusted trained models directory
+pixel_size: 0.3  # in meters
+
+target_labels:  # Target labels for detection
+   11: "Fixed-wing Aircraft"
+   12: "Small Aircraft"
+   13: "Cargo Plane"
+   15: "Helicopter"
+   
+
+preprocess_method: "tiling"
+
+# Module-specific parameters
+preprocess:
+  output_subdir: "preprocessed_datasets/data"
+  filtered_labels_filename: "filtered_labels.json"
+  clean_subdir: true
+  train_split: 0.8
+
+train:
+  output_subdir: "results"
+  hyperparameters_filename: "hyperparams.csv"
+  # Removed 'hyperparameter_grid' from here
+
+knee_discovery:
+  output_subdir: "results"
+  cache_results: true
+  use_eval_cache: true
+  eval_results_filename: "iapc_results.csv"
+  clean_named_preprocess_subdir: 'degraded'
+  search_resolution_range: [0.05, 1.0]
+  search_resolution_step: 0.05
+
+report:
+  output_subdir: "reports"
+  clean_subdir: false
+
+preprocess_methods:
+  tiling:
+    image_size: 640
+    stride: 100
+    train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}"
+    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}"
+    train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+    val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+    output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
+  padding:
+    padsize: "max_square"
+    image_size: 640
+    train_baseline_subdir: "baseline/train/padding/{maxwidth}_{maxheight}"
+    val_baseline_subdir: "baseline/val/padding/{maxwidth}_{maxheight}"
+    train_degraded_subdir: "degraded/train/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+    val_degraded_subdir: "degraded/val/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
+
+models:
+  yolov8m:
+    name: 'yolov8m'
+    pretrained:
+      library: "ultralytics"
+      trained_name: "yolov8m"
+    trained_model_filename: "yolov8m/model_{hashed_params}.pt"
+    params:
+      imgsz: 640
+      epochs: 50
+      batch: 16
+      freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    hyperparameters:  # Moved hyperparameters here
+      cls: [5.0]
+      batch: [16]
+      epochs: [100]
