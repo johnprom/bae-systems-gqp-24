@@ -137,12 +137,15 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
 
     # Generate all combinations of hyperparameters from YAML
     keys, values = zip(*hyperparameter_grid.items())
-    combinations = [dict(zip(keys, v)) for v in product(*values)]
+    if len(hyperparameter_grid) > 0:
+        combinations = [dict(zip(keys, v)) for v in product(*values)]
+    else:
+        combinations = [base_params]
 
     # Check if fractional factorial flag is set
-    if fractional_factorial:
+    if fractional_factorial and len(hyperparameter_grid) > 0:
         # Use ParameterSampler for a structured, fractional search
-        n_iter = len(combinations) // 2  # Use half of the combinations as an example
+        n_iter = max(len(combinations) // 2, 1) # Use half of the combinations as an example
         param_distributions = {key: values for key, values in hyperparameter_grid.items()}
         combinations = list(ParameterSampler(param_distributions, n_iter=n_iter, random_state=42))
         print(f"Starting fractional factorial hyperparameter tuning with {len(combinations)} combinations...")
@@ -184,11 +187,11 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
         if avg_mAP > best_mAP:
             best_mAP = avg_mAP
             best_params = current_params
-            ctxt.final_weights_path = os.path.join(
-                ctxt.get_output_dir_path(),
-                config['train']['output_subdir'],
-                config['train'].get('trained_model_filename', 'best_model.pt')
-            )
+            # ctxt.final_weights_path = os.path.join(
+            #     ctxt.get_output_dir_path(),
+            #     config['train']['output_subdir'],
+            #     config['train'].get('trained_model_filename', 'best_model.pt')
+            # )
             os.makedirs(os.path.dirname(ctxt.final_weights_path), exist_ok=True)
             model.save(ctxt.final_weights_path)
             print(f"New best model saved at: {ctxt.final_weights_path}")
