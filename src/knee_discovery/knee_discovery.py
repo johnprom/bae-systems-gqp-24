@@ -224,17 +224,43 @@ def calc_degradation_factor(orig_res_w, orig_res_h, eff_res_w, eff_res_h):
     return degradation_factor # pd.Series
 
 def find_interp_range_indicies(x_array, x, granularity):
-    for idx, value in enumerate(x_array):
-        if abs(value - x) <= granularity:
-            return idx, idx
-    idx = bisect.bisect_right(x_array, x)
-    if idx == 0:
-        return idx, idx
-    elif idx >= len(x_array):
-        raise ValueError("find_interp_range(): x > any value in x_array")
-    else:
-        return idx, (idx - 1)
+    # low_index = None
+    # high_index = None
 
+    diffs = [(val - x) for val in x_array]
+    # absdiffs = [abs(d) for d in diffs]
+
+    # closest_index = absdiffs.index(min(absdiffs)) # if equal, returns the lower one
+    x_array = np.array(x_array)
+    closest_index = np.argmin(np.abs(x_array - x))
+    if abs(x_array[closest_index] - x) < (granularity / 2):
+        low_index = closest_index
+        high_index = closest_index
+    elif diffs[closest_index] < 0.0:
+        low_index = closest_index
+        high_index = closest_index + 1
+    else:
+        low_index = closest_index - 1
+        high_index = closest_index
+
+    if low_index < 0:
+        low_index = 0
+
+    if high_index >= len(x_array):
+        high_index = len(x_array) - 1
+
+    return low_index, high_index
+
+    # for idx, value in enumerate(x_array):
+    #     if abs(value - x) <= granularity:
+    #         return idx, idx
+    # idx = bisect.bisect_right(x_array, x)
+    # if idx == 0:
+    #     return idx, idx
+    # elif idx >= len(x_array):
+    #     raise ValueError("find_interp_range(): x > any value in x_array")
+    # else:
+    #     return idx, (idx - 1)
 
 def calculate_knee(ctxt, class_name, results_class_df):
     """
@@ -298,7 +324,7 @@ def calculate_knee(ctxt, class_name, results_class_df):
 
     # Apply spline interpolation to smooth the data
     config = ctxt.get_pipeline_config()
-    knee_resolution_divisor, knee_step = ctxt.get_knee_resolution_divisor()
+    knee_resolution_divisor, knee_resolution_granularity, knee_step = ctxt.get_knee_resolution_divisor()
     if ctxt.verbose:
         print(f"knee_resolution_divisor {knee_resolution_divisor}")
         print(f"knee_step {knee_step}")
@@ -308,12 +334,12 @@ def calculate_knee(ctxt, class_name, results_class_df):
         start = x_array.min()
         stop = x_array.max()
         num_data_points = len(x_array)
-        # num_interpolation_points = int((math.ceil((stop - start) / interp_granularity)) + 1) # You can adjust this number as needed
+        # num_interpolation_points = int((math.ceil((stop - start) / interp_granularity)) + 1)
         num_interpolation_points = (num_data_points - 1) * knee_resolution_divisor + 1
         if ctxt.verbose:
             print(f"num_data_points {num_data_points}")
             print(f"num_interpolation_points {num_interpolation_points}")
-        if num_interpolation_points > 0:
+        if num_interpolation_points > num_data_points:
             x_interp = np.linspace(start, stop, num=num_interpolation_points)
             spline = make_interp_spline(x_array, y_array, k=3)  # Cubic spline
             y_interp = spline(x_interp)
@@ -330,13 +356,14 @@ def calculate_knee(ctxt, class_name, results_class_df):
         pwlf = PiecewiseLinFit(x_interp, y_interp)
         breaks = pwlf.fit(2)
         knee_x = breaks[1]
-        interp_granularity = knee_step / knee_resolution_divisor
-        tolearance = interp_granularity / 100
-        x_high_idx, x_low_idx = find_interp_range_indicies(x_array, knee_x, tolearance)
+        knee_x = round(knee_x / knee_resolution_granularity, 0) * knee_resolution_granularity
+        # interp_granularity = knee_step / knee_resolution_divisor
+        # tolerance = interp_granularity
+        x_low_idx, x_high_idx = find_interp_range_indicies(x_array, knee_x, knee_resolution_granularity)
         if ctxt.verbose:
             print(f"x_high_idx {x_high_idx}, x_low_idx {x_low_idx}")
-            print(f"knee_x {knee_x}, tolerance {tolearance}")
-            print(f"x_array:")
+            print(f"knee_x {knee_x}, tolerance {knee_resolution_granularity}")
+            print("x_array:")
             print(f"  {x_array}")
         # idx_high, idx_low = find_interp_indicies
         # x_high = math.ceil(knee_x / knee_step) * knee_step
@@ -350,9 +377,9 @@ def calculate_knee(ctxt, class_name, results_class_df):
             x1 = x_array[x_high_idx]
             knee_y = y0 + (knee_x - x0) * ((y1 - y0) / (x1 - x0))
             if ctxt.verbose:
-                print("x0 {x0}, x1 {x1}, y0 {y0}, y1 {y1}, knee_y {knee_y}")
+                print(f"x0 {x0}, x1 {x1}, y0 {y0}, y1 {y1}, knee_y {knee_y}")
         if ctxt.verbose:
-            print("knee_x {knee_x} knee_y {knee_y}")
+            print(f"knee_x {knee_x} knee_y {knee_y}")
 
         # Find the index of the knee point in the interpolated data
         # knee_index = np.argmin(np.abs(x_interp - knee_x))
@@ -412,13 +439,17 @@ def run_knee_discovery(ctxt):
     results_path = os.path.join(output_top_dir, config['knee_discovery']['output_subdir'])
     eval_results_filename = os.path.join(results_path, config['knee_discovery']['eval_results_filename'])
 
-    if os.path.exists(eval_results_filename):
-        os.remove(eval_results_filename)
+    knee_only = config['knee_discovery'].get('calculate_knee_only', False)
 
-    os.makedirs(results_path, exist_ok=True)
+    # if not doing preprocessing and fine-tuning, but
+    if not knee_only and os.path.exists(eval_results_filename):
+        if os.path.exists(eval_results_filename):
+            os.remove(eval_results_filename)
 
-    # Run evaluation on initial (baseline) resolutions
-    run_eval_on_degraded_images(ctxt)
+        os.makedirs(results_path, exist_ok=True)
+
+        # Run evaluation on initial (baseline) resolutions
+        run_eval_on_degraded_images(ctxt)
 
     # Load the results from CSV (or from the cached results in memory)
     if ctxt.results_cache_df is not None:

@@ -218,7 +218,20 @@ def generate_report(ctxt):
                                                               data_IRPC['effective_resolution_width'],
                                                               data_IRPC['effective_resolution_height'])
 
+    data_IRPC = data_IRPC.sort_values(['object_name', 'degradation_factor'], ascending=True).reset_index(drop=True)
     data_IRPC_knee = data_IRPC[data_IRPC['knee'] == True]
+    # for index, row in data_IRPC_knee.iterrows():
+    #     xknee = row['degradation_factor']
+    #     x0 = data_IRPC.at[index-1, 'degradation_factor']
+    #     x1 = data_IRPC.at[index+1, 'degradation_factor']
+    #     y0 = data_IRPC.at[index-1, 'pixels_on_target']
+    #     # y1 = data_IRPC.at[index+1, 'pixels_on_target']
+    #     yknee = np.sqrt(xknee * y0 * y0 / x0)
+    #     data_IRPC.at[index, 'pixels_on_target'] = int(math.ceil(yknee))
+    #     y0 = data_IRPC.at[index-1, 'mAP']
+    #     y1 = data_IRPC.at[index+1, 'mAP']
+    #     yknee = y0 + (y1 - y0)*(xknee - x0)/(x1 - x0)
+    #     data_IRPC.at[index, 'mAP'] = round(yknee, 3)
     data_IRPC_knee = data_IRPC_knee.sort_values('mAP', ascending=False).reset_index(drop=True)
     precision_dict = {}
     data_IRPC_knee['mAP'] = data_IRPC_knee['mAP'].apply(lambda x: round(x, 3))
@@ -324,9 +337,9 @@ def generate_report(ctxt):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
         for o_i, object_name in enumerate(curve_array):
-            # object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy() # TODO take this out later
-            object_data_IRPC = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
-                                            & (data_IRPC['knee'] != True))].copy()
+            object_data_IRPC = data_IRPC[data_IRPC['object_name'] == object_name].copy() # TODO take this out later
+            # object_data_IRPC = data_IRPC[((data_IRPC['object_name'] == object_name) # TODO: put this code in later
+            #                                 & (data_IRPC['knee'] != True))].copy()
             object_data_IRPC = object_data_IRPC.sort_values('degradation_factor').reset_index(drop=True)
             num_data_points = object_data_IRPC.shape[0]
             plt.plot(object_data_IRPC['degradation_factor'], object_data_IRPC['mAP'], label=f"{object_name} IRP Curve",
@@ -348,7 +361,7 @@ def generate_report(ctxt):
             if not knee_points.empty:
                 knee_degredation_factor = knee_points['degradation_factor']
                 knee_map = knee_points['mAP']
-                plt.scatter(knee_degredation_factor, knee_map, color=curve_color[o_i], s=100, zorder=5, marker="^")
+                plt.scatter(knee_degredation_factor, knee_map, color=curve_color[o_i], s=200, zorder=5, marker="^")
 
         legend_elements = [Line2D([0], [0], marker='^', color='w', label='Knees', markerfacecolor=knee_legend_color, markersize=10)]
 

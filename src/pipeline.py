@@ -9,6 +9,7 @@ import torch
 
 from knee_discovery.knee_discovery import run_knee_discovery
 from preprocessing.preprocessing import run_preprocessing
+from preprocessing.class_filtering import filter_classes
 # from reports.reports import generate_report
 from train.train import run_hyperparameter_tuning
 from util.util import load_pipeline_config
@@ -95,6 +96,8 @@ class Pipeline:
 
         self.set_train_val_dirs()
 
+        self.knee_search_resolution_step = self.config['knee_discovery']['search_resolution_step']
+
         if 'knee_resolution_interpolation_divisor' in self.config['knee_discovery']:
             self.knee_divisor = self.config['knee_discovery']['knee_resolution_interpolation_divisor']
             if not isinstance(self.knee_divisor, int):
@@ -102,8 +105,20 @@ class Pipeline:
         else:
             self.knee_divisor = 5
 
+        if 'knee_resolution_granularity' in self.config['knee_discovery']:
+            self.knee_granularity = self.config['knee_discovery']['knee_resolution_granularity']
+            if self.knee_granularity > 1.0:
+                raise ValueError("Error: knee_resolution_granularity cannot be specified higher than 1.0")
+        else:
+            self.knee_granularity = self.knee_search_resolution_step
+
+
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
+
+        # Placeholder until we can resolve this is the right thing to do
+        # filter_classes(self, list(self.config['target_labels'].keys()))
+
 
     def get_pipeline_config(self):
         """
@@ -369,7 +384,7 @@ class Pipeline:
                                              val_template.format(maxwidth=self.maxwidth, maxheight=self.maxheight, stride=stride))
 
     def get_knee_resolution_divisor(self):
-        return self.knee_divisor, self.config['knee_discovery']['search_resolution_step']
+        return self.knee_divisor, self.knee_granularity, self.knee_search_resolution_step
 
     def run_clean(self):
         """
