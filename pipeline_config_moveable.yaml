@@ -143,6 +143,7 @@ knee_discovery:
   search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
   search_resolution_step: 0.05 # REQUIRED, the steps for the range above
   knee_resolution_interpolation_divisor: 5 # MUST be a whole number, defaults to 5
+  # knee_resolution_granularity: 0.05 # The resolution granularity of the knee, defaults to search_resolution_step
   # defines the knee resolution granularity for interpolation
   # For example, if the search_resolution_step = 0.05, and knee_resolution_interpolation_divisor is 5,
   # then the knee resolution granularity is: (search_resolution_step / knee_resolution_interpolation_divisor) = 0.01
@@ -191,14 +192,16 @@ models:
       trained_name: "yolov8m"
     trained_model_filename: "yolov8m/model.pt"
     params:
+      cls: 1.5
       imgsz: 640 # REQUIRED FOR TRAINING/FINE-TUNING
-      epochs: 50 # Number of epochs to use for training
+      epochs: 100 # Number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     hyperparameters:
+      cls: [1.5]
       imgsz: [640]
       batch: [16]
-      epochs: [50]
+      epochs: [100]
       freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
       # lr0: [0.01, 0.005, 0.001]
       # momentum: [0.8, 0.95]
