@@ -442,7 +442,7 @@ def run_knee_discovery(ctxt):
     knee_only = config['knee_discovery'].get('calculate_knee_only', False)
 
     # if not doing preprocessing and fine-tuning, but
-    if not knee_only and os.path.exists(eval_results_filename):
+    if not knee_only:
         if os.path.exists(eval_results_filename):
             os.remove(eval_results_filename)
 
