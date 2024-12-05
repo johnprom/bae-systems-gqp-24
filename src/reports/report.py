@@ -184,8 +184,7 @@ def generate_report(ctxt):
                 print(f"Error: Report Generator does not have permission to access {res_filename}!")
                 return
 
-
-    if not os.path.exists(hyperparams_filename_in_report_path):
+    if os.path.exists(hyperparams_filename):
         try:
             shutil.copy2(hyperparams_filename, hyperparams_filename_in_report_path)
         except PermissionError:
@@ -198,7 +197,6 @@ def generate_report(ctxt):
                   + "Please fix and re-run Report Generator.")
             return
         except shutil.SameFileError:
-            # this really shouldn't happen due to the if statement above, but if it does, it's perfectly okay
             pass
 
     data_IRPC = pd.read_csv(results_filename_in_report_path, index_col=False)
