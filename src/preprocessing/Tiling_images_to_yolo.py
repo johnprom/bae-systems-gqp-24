@@ -135,7 +135,7 @@ class XViewTiler:
         
         for class_id in class_id_list:
             if class_id not in xview_class2index:
-                print(f"Class ID {class_id} does not exist in the label dictionary.")
+                print(f"Warning: Class ID {class_id} does not exist in the label dictionary.")
                 return {}
 
         data_dict = {}
@@ -174,7 +174,7 @@ class XViewTiler:
         for img_id, annotations in data_dict.items():
             img_path = os.path.join(file_path, img_id)
             if not os.path.exists(img_path):
-                print(f"Image {img_id} not found.")
+                print(f"Error: Image {img_id} not found.")
                 continue
 
             img = Image.open(img_path)

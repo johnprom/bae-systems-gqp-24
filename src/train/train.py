@@ -157,7 +157,8 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
 
     # Loop through all hyperparameter combinations
     for i, combination in enumerate(combinations):
-        print(f"Testing combination {i+1}/{len(combinations)}: {combination}")
+        if ctxt.verbose:
+            print(f"Testing combination {i+1}/{len(combinations)}: {combination}")
 
         # Merge base params with the current combination
         current_params = {**base_params, **combination}
@@ -194,15 +195,17 @@ def run_hyperparameter_tuning(ctxt, fractional_factorial=False):
             # )
             os.makedirs(os.path.dirname(ctxt.final_weights_path), exist_ok=True)
             model.save(ctxt.final_weights_path)
-            print(f"New best model saved at: {ctxt.final_weights_path}")
+            if ctxt.verbose:
+                print(f"New best model saved at: {ctxt.final_weights_path}")
 
     # Update hyperparameters log
     update_hyperparameters(ctxt, best_params)
     update_data_config_train_path(ctxt, ctxt.train_baseline_dir)
     update_data_config_val_path(ctxt, ctxt.val_baseline_dir)  # Reset to baseline data paths
 
-    print(f"Best Hyperparameters: {best_params}")
-    print(f"Best Average mAP: {best_mAP}")
-    print(f"Final weights saved to: {ctxt.final_weights_path}")
+    if ctxt.verbose:
+        print(f"Best Hyperparameters: {best_params}")
+        print(f"Best Average mAP: {best_mAP}")
+        print(f"Final weights saved to: {ctxt.final_weights_path}")
 
     print("Finished Running Fine-tuning.")

@@ -360,11 +360,6 @@ def calculate_knee(ctxt, class_name, results_class_df):
         # interp_granularity = knee_step / knee_resolution_divisor
         # tolerance = interp_granularity
         x_low_idx, x_high_idx = find_interp_range_indicies(x_array, knee_x, knee_resolution_granularity)
-        if ctxt.verbose:
-            print(f"x_high_idx {x_high_idx}, x_low_idx {x_low_idx}")
-            print(f"knee_x {knee_x}, tolerance {knee_resolution_granularity}")
-            print("x_array:")
-            print(f"  {x_array}")
         # idx_high, idx_low = find_interp_indicies
         # x_high = math.ceil(knee_x / knee_step) * knee_step
         # x_low = math.floor(knee_x / knee_step) * knee_step
@@ -376,10 +371,6 @@ def calculate_knee(ctxt, class_name, results_class_df):
             y1 = y_array[x_high_idx]
             x1 = x_array[x_high_idx]
             knee_y = y0 + (knee_x - x0) * ((y1 - y0) / (x1 - x0))
-            if ctxt.verbose:
-                print(f"x0 {x0}, x1 {x1}, y0 {y0}, y1 {y1}, knee_y {knee_y}")
-        if ctxt.verbose:
-            print(f"knee_x {knee_x} knee_y {knee_y}")
 
         # Find the index of the knee point in the interpolated data
         # knee_index = np.argmin(np.abs(x_interp - knee_x))
@@ -458,7 +449,7 @@ def run_knee_discovery(ctxt):
         if os.path.exists(eval_results_filename):
             results_df = pd.read_csv(eval_results_filename, index_col=False)
         else:
-            print(f"Knee discovery: {eval_results_filename} not found!")
+            print(f"Error: Knee discovery: {eval_results_filename} not found!")
             return
 
     # Ensure degradation_factor is calculated

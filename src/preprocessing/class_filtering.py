@@ -1,7 +1,7 @@
 from util.util import get_class_name_from_id, load_annotations_master, update_data_config_class_count, update_data_config_class_names, write_to_annotations_filtered
 import math
 
-def calculate_average_pixel_area(filtered_features):
+def calculate_average_pixel_area(ctxt, filtered_features):
     """
     Calculate the average pixel per object class in pixels.
 
@@ -37,7 +37,8 @@ def calculate_average_pixel_area(filtered_features):
         class_avg_areas[cls] = max(avg_area, 1)
 
     # log dictionary
-    print("Average areas per class in pixels:", class_avg_areas)
+    if ctxt.verbose:
+        print("Average areas per class in pixels:", class_avg_areas)
     
     return class_avg_areas
 
@@ -91,7 +92,7 @@ def filter_classes(ctxt, target_class_ids: list[int]):
     write_to_annotations_filtered(ctxt, filtered_features)
 
     # store object class-id to avg pixel area dict in ctxt for use in report generation
-    ctxt.object_sizes = calculate_average_pixel_area(filtered_features)
+    ctxt.object_sizes = calculate_average_pixel_area(ctxt, filtered_features)
 
     # map target class ids to class names for YOLO data config
     target_class_names = [get_class_name_from_id(ctxt, id_key) for id_key in target_class_ids]
@@ -103,5 +104,6 @@ def filter_classes(ctxt, target_class_ids: list[int]):
     update_data_config_class_names(ctxt, target_class_names)
     update_data_config_class_count(ctxt, len(target_class_names)) 
 
-    print("Finished class filtering.")
+    if ctxt.verbose:
+        print("Finished class filtering.")
     

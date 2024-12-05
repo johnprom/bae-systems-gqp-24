@@ -373,7 +373,7 @@ class Pipeline:
         train_template = params['train_baseline_subdir']
         val_template = params['val_baseline_subdir']
 
-        method = self.config['preprocess_method'] # Currently 'padding' or 'tiling'
+        method = self.config['preprocess_method'] # Currently just 'tiling'
 
         # Method-specific code
         # use ctxt.interim_images_dir to temporarily place preprocessed files prior to train_test_split
@@ -417,6 +417,10 @@ class Pipeline:
 
 
         pipeline_config = self.config
+
+        if self.verbose:
+            print("start pipeline with the following configuration:")
+            pprint.pprint(pipeline_config)
 
         start_pp = time.time()
         if "run_preprocess" in pipeline_config and pipeline_config["run_preprocess"]:

@@ -58,7 +58,7 @@ def get_timestr_file_last_mod(filename):
 def display_table(df, intro_text, page_units_used, precision_dict, output_filename):
     # page_units_used = 0
     if df is None or df.shape[0] == 0:
-        print("df is empty")
+        print("Warning: display_table: df is empty")
         return None
     cell_height = 5
     # num_lines = df.shape[0]
@@ -77,23 +77,16 @@ def display_table(df, intro_text, page_units_used, precision_dict, output_filena
     pdf.ln(4)
     width_dict = {}
     df_temp = df.copy()
-    print(df_temp['GSD'])
     for cell_header in df_temp:
         if is_numeric_dtype(df_temp[cell_header]):
             mult = 3
         else:
             mult = 2
         width_header = 2*len(header_to_readable[cell_header])
-        print(width_header)
         df_temp[cell_header] = df_temp[cell_header].astype(str)
-        print(df_temp)
         width_column = mult*df_temp[cell_header].apply(len).max()
-        print(header_to_readable[cell_header], width_header, width_column)
         width_dict[cell_header] = max(width_column, width_header)
-    print("width_dict:")
-    print(width_dict)
     total_width = sum(list(width_dict.values()))
-    print(f"total_width {total_width}")
     for cell_header in width_dict:
         width_dict[cell_header] = int(round(((width_dict[cell_header] * 190) / total_width), 0))
     for cell_header in df:
@@ -310,27 +303,19 @@ def generate_report(ctxt):
 
     graph_array = []
     curve_array = []
-    print("got here 1")
     i = 0
-    print(ctxt.report_names)
     for object_name in sorted_objects:
-        print(object_name)
         if object_name in ctxt.report_names:
-            print(object_name, ctxt.report_names)
             if (i % num_curves_per_graph) == 0:
-                print(i)
                 if i != 0:
-                    print(curve_array)
                     graph_array.append(curve_array)
                 curve_array = []
             curve_array.append(object_name)
-            print(curve_array)
             i += 1
     if len(curve_array) > 0:
         graph_array.append(curve_array)
 
     num_graphs = len(graph_array)
-    print(graph_array)
     for g_i, curve_array in enumerate(graph_array):
         plt.figure(figsize=(10, 4))
         num_curves = len(curve_array)
@@ -372,7 +357,6 @@ def generate_report(ctxt):
 
 
         plt.grid(True)
-        print("About to save report curves")
         plt.savefig(os.path.join(report_path, f'irp_curves_{g_i}.pdf'))
         plt.close()
 
@@ -456,7 +440,6 @@ def generate_report(ctxt):
             txt = f"    Knee: {knee_type_to_readable[True]} if the data point is a knee, {knee_type_to_readable[False]} if not"
             pdf.cell(1, cell_height, txt=txt, ln=True, align='L')
             first_page = False
-        print("About to output anlysis")
         pdf.output(os.path.join(report_path, f'irp_analysis_{g_i}.pdf'))
 
     merger = PdfMerger()
