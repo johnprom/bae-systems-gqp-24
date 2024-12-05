@@ -173,16 +173,6 @@ preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be spe
     #
     train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
     val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
-  padding:  # User-specified method name (can be any string)
-    padsize: "max_square" # size of padding in (width, height) or "max_square" which is the maximum square value of the dataset
-    # default is "max_square", currently only "max_square" required, so this parameter is never referenced
-    #
-    # image_size: [640, 640] # REQUIRED FOR PADDING METHOD
-    image_size: 640 # REQUIRED FOR PADDING METHOD
-    train_baseline_subdir: "baseline/train/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
-    val_baseline_subdir: "baseline/val/padding/{maxwidth}_{maxheight}" # REQUIRED FOR PADDING METHOD
-    train_degraded_subdir: "degraded/train/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
-    val_degraded_subdir: "degraded/val/padding/{maxwidth}_{maxheight}/{effective_width}_{effective_height}"
 
 models:
   yolov8m:
