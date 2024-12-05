@@ -70,7 +70,7 @@ train:
   # knee discovery
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT, subdir from top_dir/<global output_subdir>
-  # clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
+  clean_subdir: true # wipes out the knee_discovery:output_subdir above, default false
   cache_results: true # Results are cached in memory to improve performance, default false
   use_eval_cache: true # Tells the evaluation method to cache images, TODO: should go into yolov8m section
   # ONLY used if knee_discovery is being run without preprocessing or training

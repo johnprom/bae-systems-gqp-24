@@ -71,8 +71,8 @@ class Pipeline:
 
         self.iapc_columns = ['object_name', 'original_resolution_width', 'original_resolution_height', 'effective_resolution_width',
                              'effective_resolution_height', 'mAP', 'degradation_factor', 'GSD', 'pixels_on_target', 'knee']
-        # self.eval_results_filename = self.config['knee_discovery']['eval_results_filename']
         self.results_cache_df = None
+        self.eval_results_path = self.get_eval_results_path()
         self.cache_results = False
         self.knee_discovery_search_algorithm = None
         if 'run_knee_discovery' in self.config and self.config['run_knee_discovery']:
@@ -115,6 +115,11 @@ class Pipeline:
 
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
+
+        clean_knee_discovery_subdir = self.config['knee_discovery'].get('clean_subdir', True)
+        if clean_knee_discovery_subdir and self.config.get('run_knee_discovery', False) and self.config.get('run_train', False):
+            if os.path.exists(self.eval_results_path):
+                shutil.rmtree(self.eval_results_path, ignore_errors=True)
 
         filter_classes(self, list(self.config['target_labels'].keys()))
 
@@ -384,6 +389,9 @@ class Pipeline:
 
     def get_knee_resolution_divisor(self):
         return self.knee_divisor, self.knee_granularity, self.knee_search_resolution_step
+
+    def get_eval_results_path(self):
+        return os.path.join(self.get_output_dir_path(), self.config['knee_discovery']['output_subdir'])
 
     def run_clean(self):
         """

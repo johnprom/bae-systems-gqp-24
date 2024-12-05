@@ -135,6 +135,7 @@ train:
 
 knee_discovery:
   output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT
+  clean_subdir: true # wipes out the knee_discovery output_subdir, default is true
   cache_results: true # Results are cached in memory to improve performance, default false
   use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
   # ONLY used if knee_discovery is being run without preprocessing or training
