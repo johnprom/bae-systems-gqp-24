@@ -255,7 +255,7 @@ def generate_report(ctxt):
         pdf.cell(200, 6, txt="Hyperparameters used", ln=True, align='C')
         pdf.ln(4)
 
-        cell_width = 100
+        cell_width = 95
         cell_height = 5
 
         preprocess_method = config['preprocess_method']
