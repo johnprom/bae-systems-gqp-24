@@ -113,8 +113,6 @@ def run_preprocessing(ctxt):
 
     os.makedirs(ctxt.interim_images_dir, exist_ok=True)
     
-    filter_classes(ctxt, list(config['target_labels'].keys()))
-
     method = config['preprocess_method'] # Currently 'padding' or 'tiling'
 
     # Method-specific code    

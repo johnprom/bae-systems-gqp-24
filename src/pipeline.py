@@ -116,8 +116,7 @@ class Pipeline:
         if 'run_clean' in self.config and self.config['run_clean']:
             self.run_clean()
 
-        # Placeholder until we can resolve this is the right thing to do
-        # filter_classes(self, list(self.config['target_labels'].keys()))
+        filter_classes(self, list(self.config['target_labels'].keys()))
 
 
     def get_pipeline_config(self):
