@@ -3,47 +3,62 @@ run_preprocess: true # default false
 run_train: true # default false
 run_knee_discovery: true # default false
 generate_report: true # default false
-
 #
 #
 # Global parameters
 #
-# top_dir: "/home/dcfox1/git/bae-systems-gqp-24" # top-level directory, can be full path, defaults to ../
-# input_dir: "/home/dcfox1/pipeline_input" # input directory, can be full path, defaults to top_dir
-# output_dir: "/home/dcfox1/pipeline_output" # output directory, can be full path, defaults to <top_dir>/<output_subdir>
-#
-# run_clean: true # default false, deletes the output directory
 
+# Path to the top-level directory
+# Can be full path, or relative to the execution directory, defaults to "../"
+top_dir: "../"
+
+# Path to the input data directory
+# Can be full path, or relative to the execution directory, defaults to "xview_dataset_raw" under top_dir
+input_dir: "../xview_dataset_raw"
+
+# Path to the output directory
+# Can be full path, or relative to the execution directory, defaults to "output" under top_dir
+output_dir: "../output"
+
+# deletes the output directory
+# default false, deletes the output_dir directory at beginning of pipeline run
+run_clean: false
+
+# REQUIRED, either absolute path or based in topdir
 # Path to the data configuration file
-data_config_filename: "data_config.yaml" # REQUIRED and MUST be either absolute path or based in the top_dir directory
+data_config_filename: "data_config.yaml"
 
+# REQUIRED subdir below input_dir, defaults to '' (in which case the images are in input_dir directly)
 # Subdirectory containing the input images
-input_images_subdir: "xview_dataset_raw" # REQUIRED subdir from input_dir, CHANGED: used to be subdir from top_dir
+input_images_subdir: "./"
 
-# DEPRECATED, moved to preprocess
-interim_images_subdir: "interim" # only used if preprocess:interim_subdir not defined
-
+# REQUIRED inside input_dir
 # Path to the input image labels
-input_images_labels_filename: "xview_dataset_raw/xView_train.geojson" # REQUIRED inside input_dir
+input_images_labels_filename: "xView_train.geojson"
 
+# REQUIRED inside input_dir
 # Path to the class labels file
-input_class_labels_filename: "xview_dataset_raw/xview_class_labels.json" # REQUIRED inside input_dir
-
-# Directory for output results
-output_subdir: "output" # CHANGED: DEPRECATED: subdir from top_dir, only used if output_dir not defined
+input_class_labels_filename: "xview_class_labels.json"
 
 # Model configuration
-model: "yolov8m" # REQUIRED IF RUNNING PREPROCESSING OR TRAINING, name entry from models: in this file
-use_cuda: true # Instructs all modules to use CUDA, default false
+# REQUIRED name entry from models: in this file
+model: "yolov8m"
 
-# Subdirectory for trained models
-trained_models_subdir: "finetuned_models" # REQUIRED FOR TRAINING/FINE-TUNING
+# Instructs all modules to use CUDA if available, default false
+use_cuda: true
+
+# >ocation to save finetuned models, can be absolute path or under top_dir, defaults to 'finetuned_models'
+trained_models_subdir: "finetuned_models"
 
 # Pixel size in meters
-pixel_size: 0.3 # in meters
+# REQUIRED
+pixel_size: 0.3
 
-# Target labels for detection
-target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to do detection on
+# Preprocessing method
+# REQUIRED but "tiling" only preprocessing method supported at this time
+preprocess_method: "tiling"
+
+target_labels: # REQUIRED, set of target labels to do detection on
     11: 'Fixed-wing Aircraft'
     12: 'Small Aircraft'
     13: 'Cargo Plane'
@@ -105,94 +120,244 @@ target_labels: # REQUIRED FOR PREPROCESSING OR TRAINING, set of target labels to
     # 93: 'Pylon'
     # 94: 'Tower'
 
-# #
-# eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
-# only "detection" is supporeted at this time
-#
-# #
-# eval_method: "detection" # REQUIRED FOR PREPROCESSING, TRAINING OR KNEE DISCOVERY, whether to do detection or classification
-# only "detection" is supported at this time
-
-# Preprocessing method
-preprocess_method: "tiling" # REQUIRED FOR PREPROCESSING, the preprocessing method from the supported value of
-# Either "tiling" or "padding", reflected by the options in preprocess_methods below
-
-#
 # Module-specific parameters
-#
+
+##################################
+# Preprocessing Module
+##################################
 preprocess:
-  output_subdir: "preprocessed_datasets/data" # REQUIRED FOR PREPROCESSING, subdir from top_dir
-  # interim_subdir: "preprocessed_datasets/interim" # REQUIRED FOR PREPROCESSING, subdir from top_dir
-  filtered_labels_filename: "filtered_labels.json" # REQUIRED FOR PREPROCESSING, subdir from preprocess:output_subdir
-  clean_subdir: true # wipes out the preprocess output_subdir, default false
-  train_split: 0.8 # REQUIRED FOR PREPROCESSING
+
+  # Final output directory destination of preprocessed data
+  # REQUIRED, can be full path, or path relative to top_dir
+  output_subdir: "preprocessed_datasets/data"
+
+  # Interim staging directory for preprocessed data
+  # REQUIRED, can be full path, or path relative to top_dir
+  interim_subdir: "preprocessed_datasets/interim" # REQUUIRED, subdir from top_dir
+
+  # Filename for filtered labels
+  # REQUIRED, can be full path, or path relative to preoprocess:output_subdir
+  filtered_labels_filename: "filtered_labels.json"
+
+  # Delete preprocess:output_subdir before preprocessing
+  # default is false
+  clean_subdir: true
+
+  # Proportion of data used for training.
+  # REQUIRED
+  train_split: 0.8
+
+##################################
+# Training Module
+##################################
 
 train:
-  # clean_subdir: true # Code needs to be added for this
-  output_subdir: "results" # REQUIRED FOR TRAIN AND GENERATE_REPORT, subdir for top_dir/<global output_subdir>
-  hyperparameters_filename: "hyperparams.csv" # Filename to store the hyperparameters for final training
+
+  # Final output directory destination for the model (see trained_model_filename in model section)
+  # REQUIRED, subdirectory from global output_dir
+  output_subdir: "results"
+
+  # Where to store the hyperparmeters used to create the trained model
+  # Default is "hyperparams.csv"
+  hyperparameters_filename: "hyperparams.csv" # Filename under train:output_subdir, where to store
+
+  # Use the Fractional Factorial method of grid search for hyperparameter tuning
+  # Default is false
   fractional_factorial: true # default false
 
+##################################
+# Knee Discovery Module
+##################################
+
 knee_discovery:
-  output_subdir: "results" # REQUIRED FOR KNEE_DISCOVERY AND GENERATE_REPORT
-  clean_subdir: true # wipes out the knee_discovery output_subdir, default is true
-  cache_results: true # Results are cached in memory to improve performance, default false
-  use_eval_cache: true # Tells the evaluation method (provided by the method's interface) to use a cached model
-  # ONLY used if knee_discovery is being run without preprocessing or training
-  eval_results_filename: "irpc_results.csv" # REQUIRED the accumulative results file, must be a csv
-  clean_named_preprocess_subdir: 'degraded' # wipes out all degraded images, but not the baseline
-  search_resolution_range: [0.05, 1.0] # REQUIRED, the search range of the fraction of the original resolution, rounded up
-  search_resolution_step: 0.05 # REQUIRED, the steps for the range above
-  knee_resolution_interpolation_divisor: 5 # MUST be a whole number, defaults to 5
-  # knee_resolution_granularity: 0.05 # The resolution granularity of the knee, defaults to search_resolution_step
-  # defines the knee resolution granularity for interpolation
-  # For example, if the search_resolution_step = 0.05, and knee_resolution_interpolation_divisor is 5,
-  # then the knee resolution granularity is: (search_resolution_step / knee_resolution_interpolation_divisor) = 0.01
-  # Thus, the knee will be found to a granularity of 0.01
+
+  # Final output directory destination for the eval_results_filename below
+  # REQUIRED, subdirectory from global output_dir
+  output_subdir: "results" # REQUIRED, subdir from global output_dir
+
+  # Delete the knee_discovery output_subdir subdirectory prior to running knee discovery
+  # Default is false
+  clean_subdir: true
+
+  # Cache in memory the results to improve performance
+  # Default is false
+  cache_results: true
+
+  # File to store accumulative evaluation results
+  # REQUIRED, subdir from knee_discovery output_subdir
+  eval_results_filename: "irpc_results.csv"
+
+  # Inclusive knee search range of the fraction of the original resolution, rounded up
+  # REQUIRED
+  search_resolution_range: [0.05, 1.0]
+
+  # Step size for the resolution search
+  # REQUIRED
+  search_resolution_step: 0.05
+
+  # Divisor for spline interpolation in knee discovery
+  # Default 5, must be a whole positive integer
+  # Example: If search_resolution_step is 0.05, and knee_resolution_interpolation_divisor is 5,
+  # then the granularity of the fitted spline of the curve is (0.05 / 5) = 0.01
+  knee_resolution_interpolation_divisor: 5
+
+  # Knee resolution granularity for final interpolation
+  # This sets the granularity for the knee, in the step after spline interpolation
+  # Example: if knee_resolution_granularity is 0.05, then the knee will always be found at a fraction that is rounded
+  #          off to the nearest 0.05 multiple
+  # Default is the value for search_resolution_step
+  knee_resolution_granularity: 0.05
+
+##################################
+# Report Module
+##################################
 
 report:
-  output_subdir: "reports" # REQUIRED FOR GENERATING REPORT
-  clean_subdir: false # wipes out the reports output_subdir
-  report_filename: 'generated_report.pdf'
-  curves_per_graph: 3 # number of curves on each displayed graph, default is 5
 
-#
-# Supported preprocessing methods parameters
-#
-preprocess_methods: # REQUIRED FOR PREPROCESSING, at least one model MUST be specified and MUST match preprocess_method
+  # Final output directory destination for the reports
+  # REQUIRED, subdirectory from global output_dir
+  output_subdir: "reports" # REQUIRED, subdir from global output_dir
+
+  # Dete the report output_subdir directory prior to running the report generator
+  # Default is false
+  # Note: If false, then each pipeline run will be stored in a separate subdirectory (name is a timestamp) below output_subdir.
+  clean_subdir: false
+
+  # Name of the generated PDF report file
+  # REQUIRED, filename under report:output_subdir
+  report_filename: 'generated_report.pdf'
+
+  # Number of curves on each displayed graph
+  # Default is 5
+  # If this number is less than the number of target labels, filtered by display_labels, then more than one graph will appear
+  curves_per_graph: 3
+
+  # Object classes to display in the report. Report will only display results for the union of this list and target labels
+  # Default is no filter, use the full set of target labels
+  # Commented out so that we don't have to repeat the target labels here
+  # Example:
+  # display_labels:
+  #   - 'Fixed-wing Aircraft'
+  #   - 'Small Aircraft'
+  #   - 'Cargo Plane'
+  #   - 'Helicopter'
+
+##################################
+# Preprocess Methods
+##################################
+
+preprocess_methods:
+
+  # Tiling parameters section, tiling is the only method supported currently
+  # REQUIRED
+  # At least one method MUST be specified and MUST match the global preprocess_method: keyword above
   tiling:
-    image_size: 640 # REQUIRED FOR TILING METHOD
-    stride: 100 # REQUIRED FOR TILING METHOD
-    train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
-    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+
+    # Square size of image tiles
+    # REQUIRED
+    # Note: For best performance, should be equal to the input image size for the model
+    image_size: 640
+
+    # Overlap between tiles, to capture bounding boxes the would otherwise be across tiles
+    # REQUIRED
+    stride: 100
+
+    # these following directories are subdir from preprocess:output_subdir
+
+    # Subdirectory to store the baseline training set tiled images
+    # REQUIRED
+    train_baseline_subdir: "baseline/train/tiling/{maxwidth}_{maxheight}/{stride}"
+
+    # Subdirectory to store the baseline test set tiled images
+    # REQUIRED
+    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED
+
+    # Subdirectory to store the degraded training set tiled images, one directory for each effective width and height
+    # REQUIRED
     train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
-    train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
-    val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+
+    # Subdirectory to store the degraded test set tiled images, one directory for each effective width and height
+    # REQUIRED
     val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
+
+    # String to append to the filename of the tiled image to make each tiled image filename unique
+    # REQUIRED
     output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
-    # REQUIRED FOR TILING METHOD
-    #
+
+    # Subdirectory to store the hyperparameter tuning training set
+    # REQUIRED
     train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
+
+    # Subdirectory to store the hyperparameter tuning validation set
+    # REQUIRED
     val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+
+##################################
+# ML Models
+##################################
 
 models:
+
+  # Name/ID of the model
+  # REQUIRED
+  # At least one model MUST be specified and MUST match the glbal model: keyword above
   yolov8m:
+
+    # Name of the model
+    # REQUIRED, for a YOLO model, must start with the string "yolo"
     name: "yolov8m"
-    pretrained:
-      library: "ultralytics"
-      trained_name: "yolov8m"
+
+    # ID for the pretrained model
+    # For YOLO, this is the identifier of the pretrained weights to use if no pretrained model weights file is found
+    # Note: It is not recommended to use the pretrained weights without being fine-tuned
+    # Unless the dataset being used matches precisely the labels used for the pretrained model weights
+    # And in that case you will want to freeze all layers for the training phase
+    pretrained_id: "yolov8m"
+
+    # File path to save the fine-tuned model.
+    # REQUIRED
     trained_model_filename: "yolov8m/model.pt"
+
+    # Enables cacheing for evaluation
+    # Default is false
+    use_eval_cache: true
+
+    # params is being DEPRECATED and will be removed
     params:
       cls: 1.5
       imgsz: 640 # REQUIRED FOR TRAINING/FINE-TUNING
       epochs: 100 # Number of epochs to use for training
       batch: 16
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+
+    # The hyperparameter grid for fine-tuning
+    # Each parameter is expressed as a list, and if it's a list of one item, it is not varied
+    # If all hyperparmeters are a list of one, then the set of hyperparameters is fixed and not varied
     hyperparameters:
-      cls: [1.5]
+
+      # The input image size, square, for training.
+      # Allowed values are 640, 1280, and 2560. 640 is recommended. Best if matches image_size for preprocessing
+      # Default is [640]
       imgsz: [640]
+
+      # Class confidence loss gain (weight multiplier) in the loss function
+      # Must be a positive value. 1.5 is recommended.
+      # Default is [1.0]
+      cls: [1.5]
+
+      # Batch size for training. 16 is recommended.
+      # Default is typically [16] but can vary by GPU memory and dataset size
       batch: [16]
+
+      # Number of epochs of training. 100 is recommended.
+      # Default is [100]
       epochs: [100]
+
+      # Layers of YOLO's CNN-based architecture to freeze in fine-tuning.
+      # The following freezes the first 15 layers.
+      # Default is no layer is frozen.
       freeze: [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]]
+
+      # Other popular paramaters listed here but not specified (uses defaults)
       # lr0: [0.01, 0.005, 0.001]
       # momentum: [0.8, 0.95]
