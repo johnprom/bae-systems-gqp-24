@@ -176,11 +176,11 @@ def update_knee_results(ctxt, name, orig_image_size, degradation_factor, mAP):
         rcdf = pd.read_csv(eval_results_filename, index_col=False)
     else:
         rcdf = pd.DataFrame(columns=ctxt.iapc_columns)
-        
-    orig_width = math.ceil(orig_image_size[0])
-    orig_height = math.ceil(orig_image_size[1])
-    degraded_width = math.ceil(orig_image_size[0] * degradation_factor)
-    degraded_height = math.ceil(orig_image_size[1] * degradation_factor)
+
+    orig_width = int(round(orig_image_size[0], 0))
+    orig_height = int(round(orig_image_size[1], 0))
+    degraded_width = int(round((orig_image_size[0] * degradation_factor), 0))
+    degraded_height = int(round((orig_image_size[1] * degradation_factor), 0))
 
     original_gsd = config['pixel_size']
     gsd_per_pixel = original_gsd / degradation_factor
