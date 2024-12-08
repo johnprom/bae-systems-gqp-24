@@ -232,15 +232,17 @@ report:
   # If this number is less than the number of target labels, filtered by display_labels, then more than one graph will appear
   curves_per_graph: 3
 
-  # Object classes to display in the report. Report will only display results for the union of this list and target labels
-  # Default is no filter, use the full set of target labels
-  # Commented out so that we don't have to repeat the target labels here
-  # Example:
-  # display_labels:
-  #   - 'Fixed-wing Aircraft'
-  #   - 'Small Aircraft'
-  #   - 'Cargo Plane'
-  #   - 'Helicopter'
+# Object classes to display in the generated report.
+# If this list is specified, only the classes listed here will appear in the report,
+# even if the pipeline processed additional classes.
+# Default: If not specified, the report includes all target labels processed by the pipeline.
+# Example usage:
+# display_labels:
+#   - 'Fixed-wing Aircraft'
+#   - 'Small Aircraft'
+#   - 'Cargo Plane'
+#   - 'Helicopter'
+
 
 ##################################
 # Preprocess Methods
