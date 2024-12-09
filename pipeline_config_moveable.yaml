@@ -350,14 +350,6 @@ models:
     # Default is false
     use_eval_cache: true
 
-    # params is being DEPRECATED and will be removed
-    params:
-      cls: 1.5
-      imgsz: 640 # REQUIRED FOR TRAINING/FINE-TUNING
-      epochs: 100 # Number of epochs to use for training
-      batch: 16
-      freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-
     # The hyperparameter grid for fine-tuning
     # Each parameter is expressed as a list, and if it's a list of one item,
     #   it is not varied.
