@@ -149,14 +149,12 @@ This section defines the details of the YOLOv8 model used for detection.
 - **Set the class mappings** in the `config.yaml` file.  
 - **...and you’re good to go!** 🎯  
 
----
 **If the starting input data is NOT the xView GeoJSON format:**  
 
 ### **Data Conversion to GeoJSON Format**  
 
 This guide explains how to convert your dataset into **GeoJSON format**, making it compatible with various mapping and object detection pipelines.
 
----
 
 ### **Step 1: Understand Your Input Data**  
 Your input data could be in formats like CSV, JSON, or any custom format containing spatial information (coordinates).  
