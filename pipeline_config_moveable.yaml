@@ -9,45 +9,51 @@ generate_report: true # default false
 #
 
 # Path to the top-level directory
-# Can be full path, or relative to the execution directory, defaults to "../"
+# Can be full path, or relative to the execution directory
+# Default is "../"
 top_dir: "../"
 
 # Path to the input data directory
-# Can be full path, or relative to the execution directory, defaults to "xview_dataset_raw" under top_dir
+# Can be full path, or relative to the execution directory
+# Default is "xview_dataset_raw" under top_dir
 input_dir: "../xview_dataset_raw"
 
 # Path to the output directory
-# Can be full path, or relative to the execution directory, defaults to "output" under top_dir
+# Can be full path, or relative to the execution directory
+# Default is "output" under top_dir
 output_dir: "../output"
 
-# deletes the output directory
-# default false, deletes the output_dir directory at beginning of pipeline run
+# Deletes the output directory
+# Default false, deletes the output_dir directory at beginning of pipeline run
 run_clean: false
 
-# REQUIRED, either absolute path or based in topdir
 # Path to the data configuration file
+# REQUIRED, either absolute path or based in topdir
 data_config_filename: "data_config.yaml"
 
-# REQUIRED subdir below input_dir, defaults to '' (in which case the images are in input_dir directly)
 # Subdirectory containing the input images
+# REQUIRED subdir below input_dir, defaults to ''
+#   (in which case the images are in input_dir directly)
 input_images_subdir: "./"
 
-# REQUIRED inside input_dir
 # Path to the input image labels
+# REQUIRED inside input_dir
 input_images_labels_filename: "xView_train.geojson"
 
-# REQUIRED inside input_dir
 # Path to the class labels file
+# REQUIRED inside input_dir
 input_class_labels_filename: "xview_class_labels.json"
 
 # Model configuration
 # REQUIRED name entry from models: in this file
 model: "yolov8m"
 
-# Instructs all modules to use CUDA if available, default false
+# Instructs all modules to use CUDA if available
+# Default is false
 use_cuda: true
 
-# >ocation to save finetuned models, can be absolute path or under top_dir, defaults to 'finetuned_models'
+# Location to save finetuned models, can be absolute path or under top_dir
+# Default is 'finetuned_models'
 trained_models_subdir: "finetuned_models"
 
 # Pixel size in meters
@@ -58,7 +64,9 @@ pixel_size: 0.3
 # REQUIRED but "tiling" only preprocessing method supported at this time
 preprocess_method: "tiling"
 
-target_labels: # REQUIRED, set of target labels to do detection on
+# Set of target labels to do detection on
+# REQUIRED
+target_labels:
     11: 'Fixed-wing Aircraft'
     12: 'Small Aircraft'
     13: 'Cargo Plane'
@@ -133,14 +141,14 @@ preprocess:
 
   # Interim staging directory for preprocessed data
   # REQUIRED, can be full path, or path relative to top_dir
-  interim_subdir: "preprocessed_datasets/interim" # REQUUIRED, subdir from top_dir
+  interim_subdir: "preprocessed_datasets/interim"
 
   # Filename for filtered labels
   # REQUIRED, can be full path, or path relative to preoprocess:output_subdir
   filtered_labels_filename: "filtered_labels.json"
 
   # Delete preprocess:output_subdir before preprocessing
-  # default is false
+  # Default is false
   clean_subdir: true
 
   # Proportion of data used for training.
@@ -153,13 +161,14 @@ preprocess:
 
 train:
 
-  # Final output directory destination for the model (see trained_model_filename in model section)
+  # Final output directory destination for the model
+  #   (see trained_model_filename in model section)
   # REQUIRED, subdirectory from global output_dir
   output_subdir: "results"
 
   # Where to store the hyperparmeters used to create the trained model
   # Default is "hyperparams.csv"
-  hyperparameters_filename: "hyperparams.csv" # Filename under train:output_subdir, where to store
+  hyperparameters_filename: "hyperparams.csv"
 
   # Use the Fractional Factorial method of grid search for hyperparameter tuning
   # Default is false
@@ -173,9 +182,10 @@ knee_discovery:
 
   # Final output directory destination for the eval_results_filename below
   # REQUIRED, subdirectory from global output_dir
-  output_subdir: "results" # REQUIRED, subdir from global output_dir
+  output_subdir: "results"
 
-  # Delete the knee_discovery output_subdir subdirectory prior to running knee discovery
+  # Delete the knee_discovery output_subdir subdirectory prior to running
+  #   knee discovery
   # Default is false
   clean_subdir: true
 
@@ -187,7 +197,8 @@ knee_discovery:
   # REQUIRED, subdir from knee_discovery output_subdir
   eval_results_filename: "irpc_results.csv"
 
-  # Inclusive knee search range of the fraction of the original resolution, rounded up
+  # Inclusive knee search range of the fraction of the original resolution,
+  #   rounded up to an integer number of pixels
   # REQUIRED
   search_resolution_range: [0.05, 1.0]
 
@@ -196,16 +207,18 @@ knee_discovery:
   search_resolution_step: 0.05
 
   # Divisor for spline interpolation in knee discovery
-  # Default 5, must be a whole positive integer
-  # Example: If search_resolution_step is 0.05, and knee_resolution_interpolation_divisor is 5,
-  # then the granularity of the fitted spline of the curve is (0.05 / 5) = 0.01
+  # Default is 5, must be a whole positive integer
+  # Example: If search_resolution_step is 0.05, and
+  #  knee_resolution_interpolation_divisor is 5, then
+  #  the granularity of the fitted spline of the curve is (0.05 / 5) = 0.01
   knee_resolution_interpolation_divisor: 5
 
   # Knee resolution granularity for final interpolation
-  # This sets the granularity for the knee, in the step after spline interpolation
-  # Example: if knee_resolution_granularity is 0.05, then the knee will always be found at a fraction that is rounded
-  #          off to the nearest 0.05 multiple
+  # This sets the granularity for the knee,
+  #   in the step after spline interpolation
   # Default is the value for search_resolution_step
+  # Example: if knee_resolution_granularity is 0.05, then the knee will always
+  #   be found at a fraction that is rounded off to the nearest 0.05 multiple
   knee_resolution_granularity: 0.05
 
 ##################################
@@ -216,11 +229,13 @@ report:
 
   # Final output directory destination for the reports
   # REQUIRED, subdirectory from global output_dir
-  output_subdir: "reports" # REQUIRED, subdir from global output_dir
+  output_subdir: "reports"
 
-  # Dete the report output_subdir directory prior to running the report generator
+  # Delete the report output_subdir directory
+  #   prior to running the report generator
   # Default is false
-  # Note: If false, then each pipeline run will be stored in a separate subdirectory (name is a timestamp) below output_subdir.
+  # Note: If false, then each pipeline run will be stored
+  #   in a separate subdirectory (name is a timestamp) below output_subdir.
   clean_subdir: false
 
   # Name of the generated PDF report file
@@ -229,18 +244,21 @@ report:
 
   # Number of curves on each displayed graph
   # Default is 5
-  # If this number is less than the number of target labels, filtered by display_labels, then more than one graph will appear
+  # If this number is less than the number of target labels,
+  #   filtered by display_labels, then more than one graph will appear
   curves_per_graph: 3
 
-  # Object classes to display in the report. Report will only display results for the union of this list and target labels
-  # Default is no filter, use the full set of target labels
-  # Commented out so that we don't have to repeat the target labels here
-  # Example:
-  # display_labels:
-  #   - 'Fixed-wing Aircraft'
-  #   - 'Small Aircraft'
-  #   - 'Cargo Plane'
-  #   - 'Helicopter'
+# Object classes to display in the generated report.
+# If this list is specified, only the classes listed here will appear
+#   in the report, even if the pipeline processed additional classes.
+# Default: If not specified, the report includes all target labels
+#   processed by the pipeline.
+# Example usage:
+# display_labels:
+#   - 'Fixed-wing Aircraft'
+#   - 'Small Aircraft'
+#   - 'Cargo Plane'
+#   - 'Helicopter'
 
 ##################################
 # Preprocess Methods
@@ -250,15 +268,18 @@ preprocess_methods:
 
   # Tiling parameters section, tiling is the only method supported currently
   # REQUIRED
-  # At least one method MUST be specified and MUST match the global preprocess_method: keyword above
+  # At least one method MUST be specified and MUST match the
+  #   global preprocess_method: keyword above
   tiling:
 
     # Square size of image tiles
     # REQUIRED
-    # Note: For best performance, should be equal to the input image size for the model
+    # Note: For best performance, should be equal to the input image size for
+    #   the model
     image_size: 640
 
-    # Overlap between tiles, to capture bounding boxes the would otherwise be across tiles
+    # Overlap between tiles, to capture bounding boxes the would
+    # otherwise be across tiles
     # REQUIRED
     stride: 100
 
@@ -270,27 +291,30 @@ preprocess_methods:
 
     # Subdirectory to store the baseline test set tiled images
     # REQUIRED
-    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED
+    val_baseline_subdir: "baseline/val/tiling/{maxwidth}_{maxheight}/{stride}"
 
-    # Subdirectory to store the degraded training set tiled images, one directory for each effective width and height
+    # Subdirectory to store the degraded training set tiled images
+    #   one directory for each effective width and height
     # REQUIRED
     train_degraded_subdir: "degraded/train/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
 
-    # Subdirectory to store the degraded test set tiled images, one directory for each effective width and height
+    # Subdirectory to store the degraded test set tiled images
+    #   one directory for each effective width and height
     # REQUIRED
     val_degraded_subdir: "degraded/val/tiling/{maxwidth}_{maxheight}/{stride}/{effective_width}_{effective_height}"
 
-    # String to append to the filename of the tiled image to make each tiled image filename unique
+    # String to append to the filename of the tiled image
+    #   to make each tiled image filename unique
     # REQUIRED
     output_basename_append: "_{left_pixel_offset}_{top_pixel_offset}_{right_pixel_offset}_{bottom_pixel_offset}"
 
     # Subdirectory to store the hyperparameter tuning training set
     # REQUIRED
-    train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR HYPERPARAMETER TUNING
+    train_hyperparameter_subdir: "hyperparameter_tuning/train/tiling/{maxwidth}_{maxheight}/{stride}"
 
     # Subdirectory to store the hyperparameter tuning validation set
     # REQUIRED
-    val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}" # REQUIRED FOR TILING METHOD
+    val_hyperparameter_subdir: "hyperparameter_tuning/val/tiling/{maxwidth}_{maxheight}/{stride}"
 
 ##################################
 # ML Models
@@ -300,7 +324,8 @@ models:
 
   # Name/ID of the model
   # REQUIRED
-  # At least one model MUST be specified and MUST match the glbal model: keyword above
+  # At least one model MUST be specified and
+  #   MUST match the glbal model: keyword above
   yolov8m:
 
     # Name of the model
@@ -308,10 +333,13 @@ models:
     name: "yolov8m"
 
     # ID for the pretrained model
-    # For YOLO, this is the identifier of the pretrained weights to use if no pretrained model weights file is found
-    # Note: It is not recommended to use the pretrained weights without being fine-tuned
-    # Unless the dataset being used matches precisely the labels used for the pretrained model weights
-    # And in that case you will want to freeze all layers for the training phase
+    # For YOLO, this is the identifier of the pretrained weights to use
+    #   if no pretrained model weights file is found. This will trigger
+    #   a warning message.
+    # Note: You cannot use the pretrained weights without being fine-tuned,
+    #   unless the labels match precisely the labels for the pretrained model
+    #   weights. Even when that is the case, it is strongly recommended that
+    #   a new model be fine-tuned.
     pretrained_id: "yolov8m"
 
     # File path to save the fine-tuned model.
@@ -331,12 +359,15 @@ models:
       freeze: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     # The hyperparameter grid for fine-tuning
-    # Each parameter is expressed as a list, and if it's a list of one item, it is not varied
-    # If all hyperparmeters are a list of one, then the set of hyperparameters is fixed and not varied
+    # Each parameter is expressed as a list, and if it's a list of one item,
+    #   it is not varied.
+    # If all hyperparmeters are a list of one,
+    #   then the set of hyperparameters is fixed and not varied
     hyperparameters:
 
       # The input image size, square, for training.
-      # Allowed values are 640, 1280, and 2560. 640 is recommended. Best if matches image_size for preprocessing
+      # Allowed values are 640, 1280, and 2560. 640 is recommended.
+      #   Best if matches image_size for preprocessing
       # Default is [640]
       imgsz: [640]
 
