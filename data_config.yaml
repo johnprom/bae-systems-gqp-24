@@ -3,6 +3,56 @@ names:
 - Small Aircraft
 - Cargo Plane
 - Helicopter
+<<<<<<< Updated upstream
 nc: 4
 train: ../preprocessed_datasets/data/baseline/train/tiling/640_640/100
 val: ../preprocessed_datasets/data/degraded/val/tiling/640_640/100/640_640
+=======
+- Passenger Vehicle
+- Small Car
+- Bus
+- Pickup Truck
+- Utility Truck
+- Truck
+- Cargo Truck
+- Truck w/Box
+- Truck Tractor
+- Trailer
+- Truck w/Flatbed
+- Truck w/Liquid
+- Crane Truck
+- Railway Vehicle
+- Passenger Car
+- Cargo Car
+- Flat Car
+- Tank car
+- Locomotive
+- Maritime Vessel
+- Motorboat
+- Sailboat
+- Tugboat
+- Barge
+- Fishing Vessel
+- Ferry
+- Yacht
+- Container Ship
+- Oil Tanker
+- Engineering Vehicle
+- Tower crane
+- Container Crane
+- Reach Stacker
+- Straddle Carrier
+- Mobile Crane
+- Dump Truck
+- Haul Truck
+- Scraper/Tractor
+- Front loader/Bulldozer
+- Excavator
+- Cement Mixer
+- Ground Grader
+- Hut/Tent
+- Shipping Container
+nc: 48
+train: ../preprocessed_datasets/data/hyperparameter_tuning/train/tiling/640_640/100
+val: ../preprocessed_datasets/data/hyperparameter_tuning/val/tiling/640_640/100
+>>>>>>> Stashed changes
