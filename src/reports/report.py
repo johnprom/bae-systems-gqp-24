@@ -26,7 +26,7 @@ header_to_readable = {
     'mAP': 'mAP',
     'degradation_factor': '',
     'GSD': 'GSD (meters)',
-    'pixels_on_target': 'Pixels on Target',
+    'pixels_on_target': 'Pixels-on-Bounding-Box',
     'knee': 'Knee'
     }
 

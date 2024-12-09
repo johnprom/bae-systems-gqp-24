@@ -410,7 +410,7 @@ class Pipeline:
         if self.verbose:
             print("done running clean")
 
-    def run_pipeline(self):
+    def run_pipeline(self, start_pl):
         """
         Runs the complete pipeline including preprocessing, training, knee discovery, and reporting.
         """
@@ -423,9 +423,10 @@ class Pipeline:
             pprint.pprint(pipeline_config)
 
         start_pp = time.time()
+        print(f"pipeline setup duration {start_pp - start_pl} seconds")
+
         if "run_preprocess" in pipeline_config and pipeline_config["run_preprocess"]:
             run_preprocessing(self)
-
         start_tr = time.time()
         print(f"preprocessing duration {start_tr - start_pp} seconds")
 
@@ -447,10 +448,13 @@ class Pipeline:
         finish = time.time()
         print(f"generate report duration {finish - start_gr} seconds")
         print("Pipeline Finished.")
-        print(f"Total pipeline duration {finish - start_pp} seconds")
+        print(f"Total pipeline duration {finish - start_pl} seconds")
 
 # Define the main function
 def main():
+
+    start_pl = time.time()
+
     parser = argparse.ArgumentParser(description="Pipeline for determining optimal satellite imagery resolution.")
 
     parser.add_argument("config_filename", type=str, help="The path to the configuration file.")
@@ -465,7 +469,7 @@ def main():
 
     pipeline_context = Pipeline(args)
 
-    pipeline_context.run_pipeline()
+    pipeline_context.run_pipeline(start_pl)
 
     print("Exited Main.")
 
