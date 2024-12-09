@@ -140,7 +140,17 @@ This section defines the details of the YOLOv8 model used for detection.
 
 
 ### How to run the Pipeline on your own dataset
-TODO - what you would need to do
+
+## **Premise**  
+
+**If the starting input data is in the xView GeoJSON format:**  
+
+- **Hook up the directory path** in the `config.yaml` file.  
+- **Set the class mappings** in the `config.yaml` file.  
+- **...and you’re good to go!** 🎯  
+
+---
+
 
 ## High-level View
 ![image](https://github.com/user-attachments/assets/9e9dc4be-36b5-43d4-ae44-ec4b25f1216d)
