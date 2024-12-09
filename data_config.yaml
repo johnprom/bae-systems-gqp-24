@@ -1,13 +1,4 @@
 names:
-- Fixed-wing Aircraft
-- Small Aircraft
-- Cargo Plane
-- Helicopter
-<<<<<<< Updated upstream
-nc: 4
-train: ../preprocessed_datasets/data/baseline/train/tiling/640_640/100
-val: ../preprocessed_datasets/data/degraded/val/tiling/640_640/100/640_640
-=======
 - Passenger Vehicle
 - Small Car
 - Bus
@@ -55,4 +46,3 @@ val: ../preprocessed_datasets/data/degraded/val/tiling/640_640/100/640_640
 nc: 48
 train: ../preprocessed_datasets/data/hyperparameter_tuning/train/tiling/640_640/100
 val: ../preprocessed_datasets/data/hyperparameter_tuning/val/tiling/640_640/100
->>>>>>> Stashed changes
