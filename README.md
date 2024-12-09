@@ -101,6 +101,8 @@ The report module generates PDF reports of the model's performance.
 - **`report_filename`**: The filename for the generated PDF report. Default is `generated_report.pdf`.
 
 - **`curves_per_graph`**: The number of curves to display on each graph in the report. Default is `5`.
+  
+- **`display_labels`**: A list of object classes to include in the generated report. If specified, only these classes will be included, even if the pipeline processed additional classes. If not specified, all target labels processed by the pipeline will be included by default.
 
 ### 6. **Preprocessing Methods**
 Currently, the only supported preprocessing method is tiling.
