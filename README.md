@@ -17,6 +17,128 @@ python3 ./pipeline.py ../pipeline_config.yaml -v
 ### How to Configure the Pipeline Config?
 TODO - How to configure
 
+# How to Configure the Pipeline Config
+
+To properly configure the pipeline for your dataset and model, you need to set up various parameters in the configuration file. Below is an explanation of how to configure each section.
+
+### 1. **Global Parameters**
+These are the essential parameters that define the general setup for your pipeline.
+
+- **`top_dir`**: This is the path to the top-level directory containing all the directories for input, output, and data configuration files. By default, it's set to `../`.
+  
+- **`input_dir`**: The directory containing your raw input data. This should point to the directory where the dataset (e.g., `xview_dataset_raw`) resides.
+
+- **`output_dir`**: The directory where all processed outputs will be saved. The default is set to `../output`.
+
+- **`run_clean`**: Whether to delete the output directory before starting the pipeline. Default is `false`.
+
+- **`data_config_filename`**: Path to the data configuration file (e.g., `data_config.yaml`), which contains detailed information about the dataset and classes.
+
+- **`input_images_subdir`**: The subdirectory within `input_dir` where the images are located. Default is the root directory `./`.
+
+- **`input_images_labels_filename`**: Path to the input labels file in `.geojson` format, detailing the annotations for the dataset (e.g., `xView_train.geojson`).
+
+- **`input_class_labels_filename`**: The file containing the class labels, typically in JSON format (e.g., `xview_class_labels.json`).
+
+- **`model`**: The name of the model to use for training. In this case, `yolov8m` is used.
+
+- **`use_cuda`**: Set to `true` to use CUDA if available, enabling GPU acceleration.
+
+- **`trained_models_subdir`**: Subdirectory where the fine-tuned models will be saved. The default is `finetuned_models`.
+
+- **`pixel_size`**: The size of each pixel in meters. This must be provided (e.g., `0.3`).
+
+- **`preprocess_method`**: The method for preprocessing the dataset. Currently, only `tiling` is supported.
+
+- **`target_labels`**: A list of target labels (such as 'Fixed-wing Aircraft', 'Small Aircraft', etc.) that the model will detect.
+
+### 2. **Preprocessing Parameters**
+The preprocessing module is responsible for preparing the dataset for training.
+
+- **`output_subdir`**: Directory where the final preprocessed dataset will be stored. Set relative to `top_dir`.
+
+- **`interim_subdir`**: The subdirectory for interim files during preprocessing.
+
+- **`filtered_labels_filename`**: The file name for storing filtered labels after preprocessing.
+
+- **`clean_subdir`**: Whether to delete the `output_subdir` before preprocessing. Default is `true`.
+
+- **`train_split`**: The proportion of the dataset to be used for training. Default is `0.8` (80% training, 20% validation).
+
+### 3. **Training Parameters**
+This section handles the model training configurations.
+
+- **`output_subdir`**: Directory where training results will be stored, relative to `output_dir`.
+
+- **`hyperparameters_filename`**: The filename for storing hyperparameters used for training (default is `hyperparams.csv`).
+
+- **`fractional_factorial`**: Set to `true` for using fractional factorial grid search for hyperparameter tuning.
+
+### 4. **Knee Discovery Parameters**
+The knee discovery module helps optimize the resolution for training and model evaluation.
+
+- **`output_subdir`**: Directory where results of knee discovery will be saved.
+
+- **`clean_subdir`**: Whether to delete the `output_subdir` before running knee discovery. Default is `true`.
+
+- **`cache_results`**: Set to `true` to cache results for improved performance.
+
+- **`eval_results_filename`**: The file where the cumulative evaluation results will be stored.
+
+- **`search_resolution_range`**: The range of resolution fractions to search for optimal performance. Default is `[0.05, 1.0]`.
+
+- **`search_resolution_step`**: The step size for resolution search.
+
+- **`knee_resolution_interpolation_divisor`**: Granularity for fitting a spline for knee discovery. Default is `5`.
+
+### 5. **Report Parameters**
+The report module generates PDF reports of the model's performance.
+
+- **`output_subdir`**: Directory where the report will be stored.
+
+- **`clean_subdir`**: Whether to delete the `output_subdir` before generating the report. Default is `false`.
+
+- **`report_filename`**: The filename for the generated PDF report. Default is `generated_report.pdf`.
+
+- **`curves_per_graph`**: The number of curves to display on each graph in the report. Default is `5`.
+
+### 6. **Preprocessing Methods**
+Currently, the only supported preprocessing method is tiling.
+
+- **`image_size`**: The size of the image tiles, recommended to be `640` for best performance.
+
+- **`stride`**: The overlap between tiles, which ensures that bounding boxes are captured across tile boundaries.
+
+- **`train_baseline_subdir`**: The directory for storing the tiled images for training.
+
+- **`val_baseline_subdir`**: The directory for storing the tiled images for validation.
+
+- **`train_degraded_subdir`**: The directory for storing degraded training images, if applicable.
+
+- **`val_degraded_subdir`**: The directory for storing degraded validation images.
+
+- **`output_basename_append`**: A string appended to the filename of each tiled image for uniqueness.
+
+### 7. **ML Model Parameters**
+This section defines the details of the YOLOv8 model used for detection.
+
+- **`name`**: The model name, in this case, `yolov8m`.
+
+- **`pretrained_id`**: The identifier for the pretrained model to use if no pretrained weights are found.
+
+- **`trained_model_filename`**: The filename where the fine-tuned model will be saved.
+
+- **`use_eval_cache`**: Set to `true` to enable caching for evaluation.
+
+- **`params`**: Parameters for fine-tuning, such as the number of epochs, batch size, and layers to freeze.
+
+- **`hyperparameters`**: A list of hyperparameters used for training, such as image size, batch size, and the number of epochs.
+
+---
+
+
+
+
 ### How to run the Pipeline on your own dataset
 TODO - what you would need to do
 
