@@ -15,7 +15,7 @@ python3 ./pipeline.py ../pipeline_config.yaml -v
 ```
 
 
-### How to Configure the Pipeline Config
+## How to Configure the Pipeline Config
 
 To properly configure the pipeline for your dataset and model, you need to set up various parameters in the configuration file. Below is an explanation of how to configure each section.
 
@@ -139,7 +139,7 @@ This section defines the details of the YOLOv8 model used for detection.
 
 
 
-### How to run the Pipeline on your own dataset
+## How to run the Pipeline on your own dataset
 
 ### **Premise**  
 
@@ -169,7 +169,7 @@ id,latitude,longitude,class
 ```
 
 
-## **Step 2: Create a Script for Conversion**  
+### **Step 2: Create a Script for Conversion**  
 Write a custom script that reads your dataset and converts it to GeoJSON format.
 
 ### **What to Include in the Script:**  
@@ -178,7 +178,7 @@ Write a custom script that reads your dataset and converts it to GeoJSON format.
 - Format them into GeoJSON format using libraries like `geojson`, `json`, or `pandas`.  
 - Save the output as a `.geojson` file.
 
-## **Step 3: Expected Output Format**  
+### **Step 3: Expected Output Format**  
 
 ### **Example Output (GeoJSON):**  
 
@@ -213,7 +213,7 @@ Write a custom script that reads your dataset and converts it to GeoJSON format.
 ```
 
 
-## **Next Steps**  
+### **Next Steps**  
 
 - **Test Your Script:** Ensure the generated GeoJSON is valid.  
 - **Use the GeoJSON File:** Plug it into your object detection or mapping pipeline.  
