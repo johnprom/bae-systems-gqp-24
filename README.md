@@ -141,7 +141,7 @@ This section defines the details of the YOLOv8 model used for detection.
 
 ### How to run the Pipeline on your own dataset
 
-## **Premise**  
+### **Premise**  
 
 **If the starting input data is in the xView GeoJSON format:**  
 
