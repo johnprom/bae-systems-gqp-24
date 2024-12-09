@@ -150,7 +150,79 @@ This section defines the details of the YOLOv8 model used for detection.
 - **...and you’re good to go!** 🎯  
 
 ---
+**If the starting input data is NOT the xView GeoJSON format:**  
 
+### **Data Conversion to GeoJSON Format**  
+
+This guide explains how to convert your dataset into **GeoJSON format**, making it compatible with various mapping and object detection pipelines.
+
+---
+
+### **Step 1: Understand Your Input Data**  
+Your input data could be in formats like CSV, JSON, or any custom format containing spatial information (coordinates).  
+
+### **Example Input Data (CSV):**
+```csv
+id,latitude,longitude,class
+1,34.0522,-118.2437,building
+2,40.7128,-74.0060,vehicle
+```
+
+---
+
+## **Step 2: Create a Script for Conversion**  
+Write a custom script that reads your dataset and converts it to GeoJSON format.
+
+### **What to Include in the Script:**  
+- Read the input file (e.g., CSV or JSON).  
+- Extract relevant properties like coordinates, IDs, and classes.  
+- Format them into GeoJSON format using libraries like `geojson`, `json`, or `pandas`.  
+- Save the output as a `.geojson` file.
+
+---
+
+## **Step 3: Expected Output Format**  
+
+### **Example Output (GeoJSON):**  
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-118.2437, 34.0522]
+      },
+      "properties": {
+        "id": 1,
+        "class": "building"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.0060, 40.7128]
+      },
+      "properties": {
+        "id": 2,
+        "class": "vehicle"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## **Next Steps**  
+
+- **Test Your Script:** Ensure the generated GeoJSON is valid.  
+- **Use the GeoJSON File:** Plug it into your object detection or mapping pipeline.  
+
+---
 
 ## High-level View
 ![image](https://github.com/user-attachments/assets/9e9dc4be-36b5-43d4-ae44-ec4b25f1216d)
