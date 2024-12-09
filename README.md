@@ -14,10 +14,8 @@ Use the -v command-line option for verbosity:
 python3 ./pipeline.py ../pipeline_config.yaml -v
 ```
 
-### How to Configure the Pipeline Config?
-TODO - How to configure
 
-# How to Configure the Pipeline Config
+### How to Configure the Pipeline Config
 
 To properly configure the pipeline for your dataset and model, you need to set up various parameters in the configuration file. Below is an explanation of how to configure each section.
 
